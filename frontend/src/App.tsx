@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import { ChatScreen } from "@/screens/ChatScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
@@ -12,6 +13,7 @@ export default function App() {
         <Route path="/voice" element={<VoiceScreen />} />
         <Route path="/chat" element={<ChatScreen />} />
       </Routes>
+      <Toaster position="bottom-right" theme="dark" richColors />
     </BrowserRouter>
   );
 }
