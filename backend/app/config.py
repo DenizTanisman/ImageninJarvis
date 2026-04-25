@@ -46,6 +46,14 @@ class Settings:
         default_factory=lambda: os.getenv("DATABASE_URL", "sqlite:///./jarvis.db")
     )
 
+    @property
+    def sqlite_path(self) -> str:
+        """File path for the local SQLite DB."""
+        prefix = "sqlite:///"
+        if self.database_url.startswith(prefix):
+            return self.database_url[len(prefix):]
+        return self.database_url
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
