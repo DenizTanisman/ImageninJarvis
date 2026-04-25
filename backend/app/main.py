@@ -1,10 +1,11 @@
-"""FastAPI entry point. Step 0.1: only /health is wired."""
+"""FastAPI entry point."""
 from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.routes.chat import router as chat_router
 
 settings = get_settings()
 
@@ -26,3 +27,6 @@ app.add_middleware(
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+app.include_router(chat_router)
