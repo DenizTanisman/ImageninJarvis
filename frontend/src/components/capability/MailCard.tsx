@@ -1,6 +1,7 @@
 import { Inbox, Mail, Megaphone, MessagesSquare } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
+import { MailRangeSelector } from "@/components/capability/MailRangeSelector";
 import { cn } from "@/lib/utils";
 import {
   MAIL_CATEGORY_COLOR,
@@ -47,6 +48,7 @@ export function MailCard({ onReplyClick }: MailCardProps) {
 
   return (
     <div data-testid="mail-card" className="space-y-4">
+      <MailRangeSelector />
       <div className="grid gap-3 sm:grid-cols-2">
         {ORDER.map((key) => {
           const mails = MOCK_MAILS[key];
