@@ -14,17 +14,33 @@ import logging
 from typing import Any
 
 import google.generativeai as genai
+from google.api_core import exceptions as gax
 from tenacity import (
     AsyncRetrying,
     RetryError,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
 
+# These errors are caused by the request itself (bad key, bad model name,
+# quota hit) — retrying just burns quota and confuses logs. We surface
+# them as GeminiUnavailable on the first failure.
+NON_RETRYABLE_ERRORS: tuple[type[BaseException], ...] = (
+    gax.ResourceExhausted,
+    gax.PermissionDenied,
+    gax.Unauthenticated,
+    gax.InvalidArgument,
+    gax.NotFound,
+)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    return not isinstance(exc, NON_RETRYABLE_ERRORS)
+
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.0-flash"
+DEFAULT_MODEL = "gemini-2.5-flash"
 DEFAULT_MAX_CONCURRENT = 5
 DEFAULT_MAX_ATTEMPTS = 3
 
@@ -88,14 +104,22 @@ class GeminiClient:
                 async for attempt in AsyncRetrying(
                     stop=stop_after_attempt(self._max_attempts),
                     wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-                    retry=retry_if_exception_type(Exception),
+                    retry=retry_if_exception(_is_retryable),
                     reraise=False,
                 ):
                     with attempt:
                         return await self._model.generate_content_async(contents)
             except RetryError as exc:
-                logger.error("Gemini retries exhausted: %s", exc.last_attempt.exception())
-                raise GeminiUnavailable("Gemini is unreachable") from exc
+                last = exc.last_attempt.exception()
+                logger.error("Gemini retries exhausted: %s", last)
+                raise GeminiUnavailable(
+                    f"Gemini is unreachable: {type(last).__name__}"
+                ) from exc
+            except NON_RETRYABLE_ERRORS as exc:
+                logger.error("Gemini non-retryable error: %s: %s", type(exc).__name__, exc)
+                raise GeminiUnavailable(
+                    f"Gemini is unreachable: {type(exc).__name__}"
+                ) from exc
         raise GeminiUnavailable("Gemini retry loop exited without result")
 
     @staticmethod

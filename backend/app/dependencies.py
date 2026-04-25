@@ -18,7 +18,10 @@ from services.gemini_client import GeminiClient
 @lru_cache(maxsize=1)
 def _build_default_dispatcher() -> Dispatcher:
     settings = get_settings()
-    gemini = GeminiClient(api_key=settings.gemini_api_key)
+    gemini = GeminiClient(
+        api_key=settings.gemini_api_key,
+        model_name=settings.gemini_model,
+    )
     return Dispatcher(
         classifier=Classifier(),
         registry=default_registry,

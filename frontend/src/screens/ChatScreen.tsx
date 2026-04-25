@@ -1,8 +1,9 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { ChatNetworkError, sendChat } from "@/api/client";
 import { BotAvatar } from "@/components/BotAvatar";
 import { CapabilityModal } from "@/components/capability/CapabilityModal";
 import { ChatInput } from "@/components/ChatInput";
@@ -25,6 +26,7 @@ export function ChatScreen() {
   const [activeCapability, setActiveCapability] = useState<CapabilityKey | null>(
     null,
   );
+  const [isSending, setIsSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,11 +34,33 @@ export function ChatScreen() {
     if (el && typeof el.scrollTo === "function") {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }
-  }, [messages.length]);
+  }, [messages.length, isSending]);
 
-  const handleSend = (text: string) => {
+  const handleSend = async (text: string) => {
     addMessage("user", text);
-    toast.info("LLM henüz bağlı değil — Step 1'de gelecek.", { duration: 2500 });
+    setIsSending(true);
+    try {
+      const result = await sendChat(text);
+      if (result.ok) {
+        const reply =
+          typeof result.data === "string"
+            ? result.data
+            : JSON.stringify(result.data);
+        addMessage("assistant", reply);
+      } else {
+        addMessage("assistant", result.error.user_message);
+        toast.error(result.error.user_message, { duration: 3000 });
+      }
+    } catch (err) {
+      const message =
+        err instanceof ChatNetworkError
+          ? err.message
+          : "Beklenmeyen bir hata oluştu.";
+      addMessage("assistant", message);
+      toast.error(message, { duration: 3000 });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleShortcut = (key: CapabilityKey) => {
@@ -45,7 +69,7 @@ export function ChatScreen() {
   };
 
   const handleVoicePress = () => {
-    toast.info("Sesli mod Step 1'de devreye girecek.", { duration: 2000 });
+    toast.info("Sesli mod Step 1.7'de devreye girecek.", { duration: 2000 });
     navigate("/voice");
   };
 
@@ -79,9 +103,22 @@ export function ChatScreen() {
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
+        {isSending && (
+          <div
+            data-testid="typing-indicator"
+            className="flex items-center gap-2 px-4 text-xs text-slate-400"
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
+            Düşünüyor…
+          </div>
+        )}
       </section>
 
-      <ChatInput onSend={handleSend} onVoicePress={handleVoicePress} />
+      <ChatInput
+        onSend={handleSend}
+        onVoicePress={handleVoicePress}
+        disabled={isSending}
+      />
 
       <CapabilityModal
         capability={activeCapability}
