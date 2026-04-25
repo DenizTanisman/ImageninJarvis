@@ -10,3 +10,6 @@ ignore = ["E501"]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::FutureWarning",
+]
