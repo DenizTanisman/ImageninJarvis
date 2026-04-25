@@ -1,14 +1,19 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChatScreen } from "@/screens/ChatScreen";
+import { useConversation } from "@/store/conversation";
 
 vi.mock("sonner", () => ({
   toast: { info: vi.fn() },
   Toaster: () => null,
 }));
+
+beforeEach(() => {
+  useConversation.getState().resetToGreeting();
+});
 
 function LocationProbe() {
   const location = useLocation();

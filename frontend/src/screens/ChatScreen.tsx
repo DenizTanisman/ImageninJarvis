@@ -1,22 +1,14 @@
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { BotAvatar } from "@/components/BotAvatar";
 import { CapabilityModal } from "@/components/capability/CapabilityModal";
 import { ChatInput } from "@/components/ChatInput";
-import { MessageBubble, type ChatMessage } from "@/components/MessageBubble";
+import { MessageBubble } from "@/components/MessageBubble";
 import { ShortcutBar, type CapabilityKey } from "@/components/ShortcutBar";
-
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "welcome",
-    role: "assistant",
-    text: "Merhaba, size nasıl yardımcı olabilirim?",
-    createdAt: Date.now(),
-  },
-];
+import { useConversation } from "@/store/conversation";
 
 const STEP_TOAST: Record<CapabilityKey, string> = {
   mail: "Mail özeti Step 2'de gelecek.",
@@ -27,21 +19,23 @@ const STEP_TOAST: Record<CapabilityKey, string> = {
 
 export function ChatScreen() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const messages = useConversation((s) => s.messages);
+  const addMessage = useConversation((s) => s.addMessage);
+
   const [activeCapability, setActiveCapability] = useState<CapabilityKey | null>(
     null,
   );
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (el && typeof el.scrollTo === "function") {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages.length]);
 
   const handleSend = (text: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        role: "user",
-        text,
-        createdAt: Date.now(),
-      },
-    ]);
+    addMessage("user", text);
     toast.info("LLM henüz bağlı değil — Step 1'de gelecek.", { duration: 2500 });
   };
 
@@ -77,6 +71,7 @@ export function ChatScreen() {
       <ShortcutBar onSelect={handleShortcut} activeKey={activeCapability} />
 
       <section
+        ref={listRef}
         aria-label="Mesaj listesi"
         data-testid="message-list"
         className="flex-1 space-y-3 overflow-y-auto px-4 py-6"

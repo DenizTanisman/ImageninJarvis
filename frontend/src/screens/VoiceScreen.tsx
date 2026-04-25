@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { BotAvatar } from "@/components/BotAvatar";
+import { useConversation } from "@/store/conversation";
 
 export function VoiceScreen() {
   const navigate = useNavigate();
+  const messageCount = useConversation((s) => s.messages.length);
 
   const handleSwitchToChat = () => {
     toast.info("Genel LLM henüz bağlı değil — Step 1'de gelecek.", {
@@ -30,6 +32,12 @@ export function VoiceScreen() {
         <BotAvatar size="xl" pulse />
         <p className="text-sm uppercase tracking-widest text-sky-300/70">
           Dinleniyor…
+        </p>
+        <p
+          data-testid="voice-msg-count"
+          className="text-xs text-slate-500"
+        >
+          Geçmişte {messageCount} mesaj
         </p>
       </div>
 
