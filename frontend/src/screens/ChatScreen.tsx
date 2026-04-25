@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { BotAvatar } from "@/components/BotAvatar";
-import { CapabilityModalPlaceholder } from "@/components/capability/CapabilityModalPlaceholder";
+import { CapabilityModal } from "@/components/capability/CapabilityModal";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageBubble, type ChatMessage } from "@/components/MessageBubble";
 import { ShortcutBar, type CapabilityKey } from "@/components/ShortcutBar";
@@ -88,7 +88,7 @@ export function ChatScreen() {
 
       <ChatInput onSend={handleSend} onVoicePress={handleVoicePress} />
 
-      <CapabilityModalPlaceholder
+      <CapabilityModal
         capability={activeCapability}
         onOpenChange={(open) => !open && setActiveCapability(null)}
       />
