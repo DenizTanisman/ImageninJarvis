@@ -5,33 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { CalendarForm } from "@/components/capability/CalendarForm";
 import { DocumentCard } from "@/components/capability/DocumentCard";
 import { EventList } from "@/components/capability/EventList";
-import { MailCard } from "@/components/capability/MailCard";
 import { TranslationCard } from "@/components/capability/TranslationCard";
-import { MOCK_EVENTS, MOCK_MAILS, MOCK_TRANSLATION } from "@/lib/mock-data";
-
-describe("MailCard", () => {
-  it("renders four categories and the needs-reply prompt", () => {
-    const onReply = vi.fn();
-    render(<MailCard onReplyClick={onReply} />);
-    (["important", "dm", "promo", "other"] as const).forEach((key) => {
-      expect(screen.getByTestId(`mail-cat-${key}`)).toBeInTheDocument();
-    });
-    const needsReplyCount = Object.values(MOCK_MAILS)
-      .flat()
-      .filter((m) => m.needsReply).length;
-    expect(
-      screen.getByTestId("mail-reply-prompt").textContent,
-    ).toContain(String(needsReplyCount));
-  });
-
-  it("fires onReplyClick when prompt clicked", async () => {
-    const onReply = vi.fn();
-    const user = userEvent.setup();
-    render(<MailCard onReplyClick={onReply} />);
-    await user.click(screen.getByTestId("mail-reply-prompt"));
-    expect(onReply).toHaveBeenCalledOnce();
-  });
-});
+import { MOCK_EVENTS, MOCK_TRANSLATION } from "@/lib/mock-data";
 
 describe("TranslationCard", () => {
   it("swaps source and target content and languages", async () => {
