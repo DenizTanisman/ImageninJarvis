@@ -92,8 +92,8 @@ def _result_page(*, title: str, body: str, redirect_to: str | None = None) -> st
         else ""
     )
     redirect_note = (
-        f'<p style="color:#94a3b8;margin-top:2rem;font-size:0.9rem;">'
-        f'Birkaç saniye içinde Jarvis arayüzüne yönlendiriliyorsun.</p>'
+        '<p style="color:#94a3b8;margin-top:2rem;font-size:0.9rem;">'
+        'Birkaç saniye içinde Jarvis arayüzüne yönlendiriliyorsun.</p>'
         if redirect_to
         else '<p style="color:#94a3b8;margin-top:2rem;font-size:0.9rem;">'
              "Bu sekmeyi kapatabilirsin, Jarvis arayüzüne dön.</p>"
