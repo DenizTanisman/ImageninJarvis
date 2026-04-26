@@ -30,6 +30,7 @@ from capabilities.gmail.strategy import MailStrategy
 from core.result import Error, Success
 from services.auth_oauth import (
     CALENDAR_SCOPES,
+    DRIVE_SCOPES,
     GMAIL_SEND_SCOPES,
     GoogleOAuthService,
     has_required_scopes,
@@ -79,6 +80,7 @@ class AuthStatusResponse(BaseModel):
     scopes: list[str] = []
     can_send: bool = False
     can_calendar: bool = False
+    can_drive: bool = False
 
 
 @router.get("/auth-status", response_model=AuthStatusResponse)
@@ -99,6 +101,7 @@ async def auth_status(oauth: OAuthDep) -> AuthStatusResponse:
         scopes=granted,
         can_send=has_required_scopes(granted, GMAIL_SEND_SCOPES),
         can_calendar=has_required_scopes(granted, CALENDAR_SCOPES),
+        can_drive=has_required_scopes(granted, DRIVE_SCOPES),
     )
 
 

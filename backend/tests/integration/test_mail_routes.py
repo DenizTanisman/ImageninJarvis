@@ -78,6 +78,7 @@ def test_auth_status_returns_disconnected_when_no_token(client: TestClient) -> N
         "scopes": [],
         "can_send": False,
         "can_calendar": False,
+        "can_drive": False,
     }
 
 
@@ -112,3 +113,22 @@ def test_auth_status_reports_can_calendar_when_calendar_scope_granted(
     body = response.json()
     assert body["can_calendar"] is True
     assert body["can_send"] is False
+    assert body["can_drive"] is False
+
+
+def test_auth_status_reports_can_drive_when_drive_scope_granted(
+    client: TestClient,
+) -> None:
+    fake = MagicMock()
+    fake.credentials_for.return_value = MagicMock(
+        scopes=[
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/drive.readonly",
+        ]
+    )
+    app.dependency_overrides[get_oauth_service] = lambda: fake
+    response = client.get("/mail/auth-status")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["can_drive"] is True
+    assert body["can_calendar"] is False

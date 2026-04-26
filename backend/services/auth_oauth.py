@@ -42,7 +42,10 @@ GMAIL_FULL_SCOPES: tuple[str, ...] = GMAIL_READONLY_SCOPES + GMAIL_SEND_SCOPES
 CALENDAR_SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/calendar.events",
 )
-ALL_SCOPES: tuple[str, ...] = GMAIL_FULL_SCOPES + CALENDAR_SCOPES
+DRIVE_SCOPES: tuple[str, ...] = (
+    "https://www.googleapis.com/auth/drive.readonly",
+)
+ALL_SCOPES: tuple[str, ...] = GMAIL_FULL_SCOPES + CALENDAR_SCOPES + DRIVE_SCOPES
 DEFAULT_USER_ID = "default"
 
 

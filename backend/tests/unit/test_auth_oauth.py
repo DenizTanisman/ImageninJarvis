@@ -7,6 +7,7 @@ from cryptography.fernet import Fernet
 from services.auth_oauth import (
     ALL_SCOPES,
     CALENDAR_SCOPES,
+    DRIVE_SCOPES,
     GMAIL_FULL_SCOPES,
     GMAIL_READONLY_SCOPES,
     GoogleOAuthService,
@@ -137,14 +138,21 @@ def test_credentials_for_returns_credentials_when_stored(store: TokenStore) -> N
     assert creds.token == "a"
 
 
-def test_default_scopes_include_gmail_and_calendar() -> None:
-    """Step 4.1: a fresh OAuth grant must request calendar.events alongside
-    gmail so the user only sees one consent screen for everything."""
+def test_default_scopes_include_all_capabilities() -> None:
+    """A fresh OAuth grant must request gmail + calendar + drive together
+    so the user only sees one consent screen for everything Jarvis needs."""
     assert set(GMAIL_FULL_SCOPES).issubset(set(ALL_SCOPES))
     assert set(CALENDAR_SCOPES).issubset(set(ALL_SCOPES))
+    assert set(DRIVE_SCOPES).issubset(set(ALL_SCOPES))
 
 
 def test_has_required_scopes_recognizes_calendar_subset() -> None:
     granted = list(GMAIL_FULL_SCOPES) + list(CALENDAR_SCOPES)
     assert has_required_scopes(granted, CALENDAR_SCOPES)
     assert not has_required_scopes(GMAIL_READONLY_SCOPES, CALENDAR_SCOPES)
+
+
+def test_has_required_scopes_recognizes_drive_subset() -> None:
+    granted = list(GMAIL_FULL_SCOPES) + list(DRIVE_SCOPES)
+    assert has_required_scopes(granted, DRIVE_SCOPES)
+    assert not has_required_scopes(GMAIL_READONLY_SCOPES, DRIVE_SCOPES)
