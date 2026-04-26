@@ -200,6 +200,119 @@ export async function callCalendar(
   return postJson<CalendarResponse>("/calendar", body, signal);
 }
 
+export interface UploadedDocDTO {
+  doc_id: string;
+  page_count: number;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
+export async function uploadDocument(
+  file: File,
+  signal?: AbortSignal,
+): Promise<UploadedDocDTO> {
+  const form = new FormData();
+  form.append("file", file);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/upload`, {
+      method: "POST",
+      body: form,
+      signal,
+    });
+  } catch (err) {
+    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+  }
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      /* ignore */
+    }
+    throw new ChatNetworkError(detail);
+  }
+  return (await response.json()) as UploadedDocDTO;
+}
+
+export interface DriveFileDTO {
+  id: string;
+  name: string;
+  mime_type: string;
+  size_bytes: number;
+  modified_time: string;
+}
+
+export async function listDriveFiles(signal?: AbortSignal): Promise<DriveFileDTO[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/drive/files`, { signal });
+  } catch (err) {
+    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+  }
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new ChatNetworkError("Drive'a bağlı değilsin ya da Drive iznini vermemişsin.");
+    }
+    throw new ChatNetworkError(`Drive listesi alınamadı (HTTP ${response.status}).`);
+  }
+  const body = (await response.json()) as { files: DriveFileDTO[] };
+  return body.files;
+}
+
+export async function importDriveFile(
+  fileId: string,
+  signal?: AbortSignal,
+): Promise<UploadedDocDTO> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/drive/import`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ file_id: fileId }),
+      signal,
+    });
+  } catch (err) {
+    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+  }
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      /* ignore */
+    }
+    throw new ChatNetworkError(detail);
+  }
+  return (await response.json()) as UploadedDocDTO;
+}
+
+export interface DocumentAnswerDTO {
+  doc_id: string;
+  question: string;
+  answer: string;
+  chunks_used: number;
+  total_chunks: number;
+}
+
+export type DocumentAskResponse =
+  | { ok: true; ui_type: "DocumentAnswer"; data: DocumentAnswerDTO; meta?: Record<string, unknown> | null }
+  | ChatErrorResponse;
+
+export async function askDocument(
+  body: { doc_id: string; question: string },
+  signal?: AbortSignal,
+): Promise<DocumentAskResponse> {
+  return postJson<DocumentAskResponse>(
+    "/document",
+    { action: "ask", ...body },
+    signal,
+  );
+}
+
 async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {

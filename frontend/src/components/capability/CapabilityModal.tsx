@@ -34,8 +34,8 @@ const META: Record<CapabilityKey, { title: string; description: string }> = {
     description: "Etkinlik oluştur veya 7 günlük ajandayı gör.",
   },
   document: {
-    title: "Döküman (mock)",
-    description: "Drive'dan seç veya PDF/TXT yükle. Step 5'te parse + Q&A.",
+    title: "Döküman",
+    description: "Drive'dan seç veya PDF/TXT yükle, belgeden soru sor.",
   },
 };
 

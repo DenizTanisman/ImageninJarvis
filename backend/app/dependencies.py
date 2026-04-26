@@ -12,6 +12,7 @@ from pathlib import Path
 from app.config import get_settings
 from capabilities.calendar.adapter import CalendarAdapter
 from capabilities.calendar.strategy import CalendarStrategy
+from capabilities.document.drive_adapter import DriveAdapter
 from capabilities.document.strategy import DocumentStrategy
 from capabilities.gmail.adapter import GmailAdapter
 from capabilities.gmail.classifier import EmailClassifier
@@ -97,6 +98,14 @@ def get_document_strategy() -> DocumentStrategy:
     strategy = _build_document_strategy()
     _ensure_registered(strategy)
     return strategy
+
+
+def get_drive_adapter_factory():
+    """Return a callable that builds a DriveAdapter from credentials.
+
+    Tests override this with a factory that yields a mock adapter so
+    google-api-python-client never gets instantiated for real."""
+    return lambda creds: DriveAdapter(creds)
 
 
 def _ensure_registered(strategy) -> None:

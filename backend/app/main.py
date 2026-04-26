@@ -9,6 +9,7 @@ from app.routes.auth import router as auth_router
 from app.routes.calendar import router as calendar_router
 from app.routes.chat import router as chat_router
 from app.routes.document import router as document_router
+from app.routes.drive import router as drive_router
 from app.routes.mail import router as mail_router
 from app.routes.translation import router as translation_router
 from app.routes.upload import router as upload_router
@@ -42,3 +43,4 @@ app.include_router(translation_router)
 app.include_router(calendar_router)
 app.include_router(upload_router)
 app.include_router(document_router)
+app.include_router(drive_router)
