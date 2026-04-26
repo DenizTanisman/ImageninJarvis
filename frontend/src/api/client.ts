@@ -68,6 +68,41 @@ export async function fetchMailSummary(
 export interface AuthStatus {
   connected: boolean;
   scopes: string[];
+  can_send: boolean;
+}
+
+export interface ReplyDraftDTO {
+  message_id: string;
+  thread_id: string;
+  to: string;
+  subject: string;
+  body: string;
+}
+
+export interface DraftsResponseDTO {
+  drafts: ReplyDraftDTO[];
+  failures: string[];
+}
+
+export async function generateDrafts(
+  message_ids: string[],
+  signal?: AbortSignal,
+): Promise<DraftsResponseDTO> {
+  return postJson<DraftsResponseDTO>("/mail/drafts", { message_ids }, signal);
+}
+
+export interface SendDraftRequest extends ReplyDraftDTO {}
+
+export interface SendDraftResponse {
+  sent_message_id: string | null;
+  error: ChatErrorPayload | null;
+}
+
+export async function sendDraft(
+  draft: SendDraftRequest,
+  signal?: AbortSignal,
+): Promise<SendDraftResponse> {
+  return postJson<SendDraftResponse>("/mail/send", draft, signal);
 }
 
 export async function getAuthStatus(signal?: AbortSignal): Promise<AuthStatus> {

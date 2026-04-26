@@ -59,7 +59,7 @@ const fakePayload = {
 
 describe("MailCard real-data flow", () => {
   it("shows a Connect Google block when not authenticated", async () => {
-    getAuthStatusMock.mockResolvedValueOnce({ connected: false, scopes: [] });
+    getAuthStatusMock.mockResolvedValueOnce({ connected: false, scopes: [], can_send: false });
     render(<MailCard />);
     expect(await screen.findByTestId("mail-needs-auth")).toBeInTheDocument();
     expect(screen.getByTestId("connect-google")).toHaveAttribute(
@@ -73,6 +73,7 @@ describe("MailCard real-data flow", () => {
     getAuthStatusMock.mockResolvedValue({
       connected: true,
       scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+      can_send: false,
     });
     fetchMailSummaryMock.mockResolvedValueOnce({
       ok: true,
@@ -89,7 +90,7 @@ describe("MailCard real-data flow", () => {
   });
 
   it("re-fetches when range kind changes", async () => {
-    getAuthStatusMock.mockResolvedValue({ connected: true, scopes: [] });
+    getAuthStatusMock.mockResolvedValue({ connected: true, scopes: [], can_send: false });
     fetchMailSummaryMock.mockResolvedValue({
       ok: true,
       ui_type: "MailCard",
@@ -111,7 +112,7 @@ describe("MailCard real-data flow", () => {
   });
 
   it("renders friendly error when backend returns ok:false", async () => {
-    getAuthStatusMock.mockResolvedValueOnce({ connected: true, scopes: [] });
+    getAuthStatusMock.mockResolvedValueOnce({ connected: true, scopes: [], can_send: false });
     fetchMailSummaryMock.mockResolvedValueOnce({
       ok: false,
       error: { user_message: "Mailler çekilemedi", retry_after: 10 },
@@ -129,7 +130,7 @@ describe("MailCard real-data flow", () => {
   });
 
   it("calls onReplyClick when prompt button is pressed", async () => {
-    getAuthStatusMock.mockResolvedValueOnce({ connected: true, scopes: [] });
+    getAuthStatusMock.mockResolvedValueOnce({ connected: true, scopes: [], can_send: false });
     fetchMailSummaryMock.mockResolvedValueOnce({
       ok: true,
       ui_type: "MailCard",

@@ -73,7 +73,7 @@ def test_auth_status_returns_disconnected_when_no_token(client: TestClient) -> N
     app.dependency_overrides[get_oauth_service] = lambda: fake
     response = client.get("/mail/auth-status")
     assert response.status_code == 200
-    assert response.json() == {"connected": False, "scopes": []}
+    assert response.json() == {"connected": False, "scopes": [], "can_send": False}
 
 
 def test_auth_status_returns_connected_when_token_present(client: TestClient) -> None:

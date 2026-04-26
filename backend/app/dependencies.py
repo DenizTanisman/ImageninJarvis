@@ -9,7 +9,9 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.config import get_settings
+from capabilities.gmail.adapter import GmailAdapter
 from capabilities.gmail.classifier import EmailClassifier
+from capabilities.gmail.draft import DraftGenerator
 from capabilities.gmail.strategy import MailStrategy
 from core.classifier import Classifier
 from core.dispatcher import Dispatcher
@@ -93,3 +95,21 @@ def get_mail_strategy() -> MailStrategy:
     if all(s.name != strategy.name for s in default_registry.all()):
         default_registry.register(strategy)
     return strategy
+
+
+@lru_cache(maxsize=1)
+def _build_draft_generator() -> DraftGenerator:
+    return DraftGenerator(_build_gemini_client())
+
+
+def get_draft_generator() -> DraftGenerator:
+    return _build_draft_generator()
+
+
+def get_gmail_adapter_factory():
+    """Return a callable that builds a GmailAdapter from credentials.
+
+    Tests override this with a factory that yields a mock adapter so the
+    real google-api-python-client never gets touched.
+    """
+    return lambda creds: GmailAdapter(creds)

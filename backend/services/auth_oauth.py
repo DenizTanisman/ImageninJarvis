@@ -28,11 +28,22 @@ from google_auth_oauthlib.flow import Flow  # noqa: E402
 
 from .token_store import TokenStore  # noqa: E402
 
-# Step 2.1 ships read-only Gmail. gmail.send joins in 2.7 (re-consent flow).
+# Capability scope groups. We pass the union to Google so the user
+# consents once for everything Step 2 needs; future capabilities (calendar,
+# drive) will trigger a re-consent the first time they're requested.
 GMAIL_READONLY_SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/gmail.readonly",
 )
+GMAIL_SEND_SCOPES: tuple[str, ...] = (
+    "https://www.googleapis.com/auth/gmail.send",
+)
+GMAIL_FULL_SCOPES: tuple[str, ...] = GMAIL_READONLY_SCOPES + GMAIL_SEND_SCOPES
 DEFAULT_USER_ID = "default"
+
+
+def has_required_scopes(granted: Iterable[str], required: Iterable[str]) -> bool:
+    granted_set = set(granted)
+    return all(req in granted_set for req in required)
 
 
 @dataclass(frozen=True)
@@ -60,7 +71,7 @@ class GoogleOAuthService:
         client_secret: str,
         redirect_uri: str,
         token_store: TokenStore,
-        scopes: Iterable[str] = GMAIL_READONLY_SCOPES,
+        scopes: Iterable[str] = GMAIL_FULL_SCOPES,
     ) -> None:
         if not client_id or not client_secret:
             raise OAuthError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required")

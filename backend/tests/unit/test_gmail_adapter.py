@@ -120,6 +120,21 @@ def test_list_messages_raises_when_list_call_fails() -> None:
         adapter.list_messages(after="x", before="y")
 
 
+def test_list_messages_wraps_transport_oserror() -> None:
+    """SSL / connection-reset errors from httplib2 surface as OSError;
+    the adapter must turn those into GmailAdapterError instead of
+    bubbling a 500 to the route."""
+    import ssl
+
+    service = MagicMock()
+    failing = MagicMock()
+    failing.execute.side_effect = ssl.SSLEOFError("UNEXPECTED_EOF_WHILE_READING")
+    service.users.return_value.messages.return_value.list.return_value = failing
+    adapter = _adapter(service)
+    with pytest.raises(GmailAdapterError):
+        adapter.list_messages(after="x", before="y")
+
+
 def test_parse_handles_missing_optional_fields() -> None:
     payload = {
         "id": "m1",

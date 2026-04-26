@@ -7,9 +7,11 @@ import {
   fetchMailSummary,
   getAuthStatus,
   googleConnectUrl,
+  type AuthStatus,
   type MailEntry,
   type MailSummaryData,
 } from "@/api/client";
+import { BatchReplyView } from "@/components/capability/BatchReplyView";
 import { MailRangeSelector } from "@/components/capability/MailRangeSelector";
 import { cn } from "@/lib/utils";
 import { MAIL_CATEGORY_COLOR, MAIL_CATEGORY_LABEL, type MailCategoryKey } from "@/lib/mock-data";
@@ -50,13 +52,21 @@ function MailRow({ entry }: { entry: MailEntry }) {
 type LoadState =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "ready"; data: MailSummaryData; cached: boolean }
+  | {
+      kind: "ready";
+      data: MailSummaryData;
+      authStatus: AuthStatus;
+      cached: boolean;
+    }
   | { kind: "error"; message: string }
   | { kind: "needs-auth" };
+
+type ViewMode = "list" | "reply";
 
 export function MailCard({ onReplyClick }: MailCardProps) {
   const range = useMailUI((s) => s.range);
   const [state, setState] = useState<LoadState>({ kind: "idle" });
+  const [view, setView] = useState<ViewMode>("list");
 
   // Re-fetch whenever the range changes (kind switch or custom date edit).
   useEffect(() => {
@@ -65,6 +75,7 @@ export function MailCard({ onReplyClick }: MailCardProps) {
 
     async function load() {
       setState({ kind: "loading" });
+      setView("list");
       try {
         const status = await getAuthStatus(controller.signal);
         if (cancelled) return;
@@ -82,6 +93,7 @@ export function MailCard({ onReplyClick }: MailCardProps) {
           setState({
             kind: "ready",
             data: result.data,
+            authStatus: status,
             cached: result.meta?.source === "cache",
           });
         } else {
@@ -102,20 +114,34 @@ export function MailCard({ onReplyClick }: MailCardProps) {
     };
   }, [range]);
 
+  const handleReplyClick = () => {
+    onReplyClick?.();
+    setView("reply");
+  };
+
   return (
     <div data-testid="mail-card" className="space-y-4">
-      <MailRangeSelector />
-      <Body state={state} onReplyClick={onReplyClick} />
+      {view === "list" && <MailRangeSelector />}
+      <Body
+        state={state}
+        view={view}
+        onReplyClick={handleReplyClick}
+        onBackToList={() => setView("list")}
+      />
     </div>
   );
 }
 
 function Body({
   state,
+  view,
   onReplyClick,
+  onBackToList,
 }: {
   state: LoadState;
-  onReplyClick?: () => void;
+  view: ViewMode;
+  onReplyClick: () => void;
+  onBackToList: () => void;
 }) {
   if (state.kind === "loading") {
     return (
@@ -164,7 +190,18 @@ function Body({
     return null;
   }
 
-  const { data, cached } = state;
+  const { data, authStatus, cached } = state;
+
+  if (view === "reply") {
+    return (
+      <BatchReplyView
+        summary={data}
+        authStatus={authStatus}
+        onClose={onBackToList}
+      />
+    );
+  }
+
   return (
     <>
       {cached && (

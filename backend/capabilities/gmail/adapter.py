@@ -1,13 +1,16 @@
 """Gmail API wrapper.
 
 Calls Google's Gmail v1 API with a pre-built ``Credentials`` object.
-Only metadata + snippet is fetched (no message body) to keep token /
-quota usage low; the classifier in 2.5 sees enough text to bucket the
-mail without paying for the full payload.
+Only metadata + snippet is fetched in ``list_messages`` to keep token /
+quota usage low; full bodies are pulled lazily via ``get_full_message``
+when a draft needs context, and ``send_reply`` posts an RFC-2822 reply
+threaded with the original.
 """
 from __future__ import annotations
 
+import base64
 import logging
+from email.message import EmailMessage
 from typing import Any
 
 from google.oauth2.credentials import Credentials
@@ -20,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_RESULTS = 30
 METADATA_HEADERS = ("From", "Subject", "Date")
+# googleapiclient's HttpRequest.execute() retries on its own when this is >0.
+# Covers transient TLS / connection resets we hit on macOS Python 3.13.
+EXECUTE_NUM_RETRIES = 3
 
 
 class GmailAdapterError(RuntimeError):
@@ -61,9 +67,9 @@ class GmailAdapter:
                 self._service.users()
                 .messages()
                 .list(userId="me", q=query, maxResults=max_results)
-                .execute()
+                .execute(num_retries=EXECUTE_NUM_RETRIES)
             )
-        except HttpError as exc:
+        except (HttpError, OSError) as exc:
             raise GmailAdapterError(f"Gmail list failed: {exc}") from exc
 
         ids = [m["id"] for m in list_resp.get("messages", []) if "id" in m]
@@ -79,15 +85,66 @@ class GmailAdapter:
                         format="metadata",
                         metadataHeaders=list(METADATA_HEADERS),
                     )
-                    .execute()
+                    .execute(num_retries=EXECUTE_NUM_RETRIES)
                 )
-            except HttpError as exc:
+            except (HttpError, OSError) as exc:
                 logger.warning("Skipping mail %s: %s", message_id, exc)
                 continue
             summary = _parse_metadata(payload)
             if summary is not None:
                 summaries.append(summary)
         return summaries
+
+
+    def get_full_message(self, message_id: str) -> dict[str, Any]:
+        """Fetch the full message including the body text — used by the
+        draft generator for grounding context. Body parts are returned
+        as base64url strings (Google's encoding); call sites decode."""
+        try:
+            return (
+                self._service.users()
+                .messages()
+                .get(userId="me", id=message_id, format="full")
+                .execute(num_retries=EXECUTE_NUM_RETRIES)
+            )
+        except (HttpError, OSError) as exc:
+            raise GmailAdapterError(f"Gmail get failed: {exc}") from exc
+
+    def send_reply(
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        thread_id: str,
+        in_reply_to_message_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Send a plain-text reply on an existing thread.
+
+        ``in_reply_to_message_id`` should be the RFC-822 Message-Id header
+        of the message we're replying to (not the Gmail internal id) so
+        clients thread it; pass None to skip threading headers.
+        """
+        if not to or not body.strip():
+            raise GmailAdapterError("send_reply requires a recipient and body")
+        message = EmailMessage()
+        message["To"] = to
+        message["Subject"] = subject if subject.lower().startswith("re:") else f"Re: {subject}"
+        if in_reply_to_message_id:
+            message["In-Reply-To"] = in_reply_to_message_id
+            message["References"] = in_reply_to_message_id
+        message.set_content(body)
+
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+        try:
+            return (
+                self._service.users()
+                .messages()
+                .send(userId="me", body={"raw": raw, "threadId": thread_id})
+                .execute(num_retries=EXECUTE_NUM_RETRIES)
+            )
+        except (HttpError, OSError) as exc:
+            raise GmailAdapterError(f"Gmail send failed: {exc}") from exc
 
 
 def _parse_metadata(payload: dict[str, Any]) -> MailSummary | None:

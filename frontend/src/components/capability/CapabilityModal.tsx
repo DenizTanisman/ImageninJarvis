@@ -49,7 +49,7 @@ export function CapabilityModal({ capability, onOpenChange }: CapabilityModalPro
   };
 
   const handleMailReply = () => {
-    toast.info("Batch reply akışı Step 2.7'de gelecek.", { duration: 2500 });
+    // MailCard switches to its inline BatchReplyView; nothing to do here.
   };
 
   return (
