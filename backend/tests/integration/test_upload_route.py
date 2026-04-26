@@ -50,9 +50,12 @@ def test_upload_pdf_registers_doc_and_writes_to_sandbox(
     doc_id = body["doc_id"]
     assert store.has(doc_id)
     meta = store.get(doc_id)
-    written = Path(meta.file_path)
-    assert written.exists()
-    assert written.read_bytes() == pdf
+    # Step 5.7: sandbox cleanup runs in the ingest finally block, so the
+    # file should NOT be on disk anymore even though metadata + chunks
+    # are still queryable via the store.
+    assert not Path(meta.file_path).exists()
+    assert not (tmp_path / doc_id).exists()
+    assert len(meta.chunks) == 0  # blank pages produce no extractable text
 
 
 def test_upload_txt_returns_page_count_one(

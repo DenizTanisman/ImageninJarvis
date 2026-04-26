@@ -11,6 +11,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
+import time
 import uuid
 from io import BytesIO
 from pathlib import Path
@@ -21,6 +23,8 @@ from pypdf.errors import PdfReadError
 from services.document_store import DocumentMeta, DocumentStore
 
 from .parser import DocumentParseError, parse_and_chunk
+
+DEFAULT_MAX_AGE_SECONDS = 24 * 60 * 60  # 24 hours
 
 logger = logging.getLogger(__name__)
 
@@ -79,17 +83,56 @@ def ingest_bytes(
     )
     store.register(meta)
     try:
-        chunks = parse_and_chunk(file_path=target_path, mime_type=mime)
-    except DocumentParseError as exc:
-        store.forget(doc_id)
-        raise IngestError(422, str(exc)) from exc
-    store.attach_chunks(doc_id, chunks)
+        try:
+            chunks = parse_and_chunk(file_path=target_path, mime_type=mime)
+        except DocumentParseError as exc:
+            store.forget(doc_id)
+            raise IngestError(422, str(exc)) from exc
+        store.attach_chunks(doc_id, chunks)
+    finally:
+        # Sandbox file is no longer needed once chunks live in the
+        # DocumentStore; deleting eagerly closes the §4.4 attack window
+        # where a malicious upload sits on disk between requests.
+        cleanup_sandbox(target_dir)
 
     logger.info(
         "Document ingested doc_id=%s name=%s mime=%s pages=%d size=%d chunks=%d",
         doc_id, safe_name, mime, page_count, len(raw), len(chunks),
     )
     return store.get(doc_id)
+
+
+def cleanup_sandbox(path: Path) -> None:
+    """Best-effort recursive delete. Never raises — a failed cleanup
+    must not break the user-visible ingest result."""
+    try:
+        shutil.rmtree(path, ignore_errors=True)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Sandbox cleanup failed for %s: %s", path, exc)
+
+
+def sweep_old_sandboxes(
+    root: Path, *, max_age_seconds: int = DEFAULT_MAX_AGE_SECONDS
+) -> int:
+    """Remove sandbox subdirectories whose mtime is older than the cap.
+
+    Belt-and-suspenders for cases where ``cleanup_sandbox`` didn't run
+    (process crash mid-ingest, OS killed the worker, etc.). Returns the
+    number of directories removed so the caller can log it."""
+    if not root.exists():
+        return 0
+    cutoff = time.time() - max_age_seconds
+    removed = 0
+    for entry in root.iterdir():
+        if not entry.is_dir():
+            continue
+        try:
+            if entry.stat().st_mtime < cutoff:
+                shutil.rmtree(entry, ignore_errors=True)
+                removed += 1
+        except OSError as exc:
+            logger.warning("Sweep failed for %s: %s", entry, exc)
+    return removed
 
 
 def detect_mime(raw: bytes) -> str | None:
