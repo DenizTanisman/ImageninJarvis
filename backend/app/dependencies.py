@@ -9,6 +9,8 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.config import get_settings
+from capabilities.calendar.adapter import CalendarAdapter
+from capabilities.calendar.strategy import CalendarStrategy
 from capabilities.gmail.adapter import GmailAdapter
 from capabilities.gmail.classifier import EmailClassifier
 from capabilities.gmail.draft import DraftGenerator
@@ -31,11 +33,32 @@ def _build_default_dispatcher() -> Dispatcher:
     # registration through get_mail_strategy because the /mail/summary
     # route bypasses the classifier and constructs it directly.
     _ensure_registered(TranslationStrategy(gemini))
+    _ensure_registered(_build_calendar_strategy())
     return Dispatcher(
         classifier=Classifier(gemini),
         registry=default_registry,
         gemini=gemini,
     )
+
+
+@lru_cache(maxsize=1)
+def _build_calendar_strategy() -> CalendarStrategy:
+    return CalendarStrategy(oauth=_build_oauth_service())
+
+
+def get_calendar_strategy() -> CalendarStrategy:
+    strategy = _build_calendar_strategy()
+    _ensure_registered(strategy)
+    return strategy
+
+
+def get_calendar_adapter_factory():
+    """Return a callable that builds a CalendarAdapter from credentials.
+
+    Tests override this with a factory that yields a mock adapter so the
+    real google-api-python-client never gets touched.
+    """
+    return lambda creds: CalendarAdapter(creds)
 
 
 def _ensure_registered(strategy) -> None:

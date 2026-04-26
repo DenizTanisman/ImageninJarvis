@@ -1,4 +1,5 @@
 import json
+from datetime import UTC
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -125,3 +126,72 @@ async def test_classifier_short_circuits_empty_input_without_calling_gemini() ->
     intent = await classifier.classify("   ")
     assert intent.type == "fallback"
     model.generate_content_async.assert_not_called()
+
+
+# ---------- calendar ----------
+
+
+@pytest.mark.asyncio
+async def test_classifier_detects_calendar_list_intent() -> None:
+    raw = {"type": "calendar", "payload": {"action": "list", "days": 7}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("bu haftaki etkinliklerim")
+    assert intent.type == "calendar"
+    assert intent.payload["action"] == "list"
+    assert intent.payload["days"] == 7
+
+
+@pytest.mark.asyncio
+async def test_classifier_detects_calendar_create_intent() -> None:
+    raw = {
+        "type": "calendar",
+        "payload": {
+            "action": "create",
+            "summary": "Sunum",
+            "start": "2026-04-28T14:00:00+03:00",
+            "end": "2026-04-28T15:00:00+03:00",
+            "description": "",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("yarın 14'te 1 saatlik sunum ekle")
+    assert intent.type == "calendar"
+    assert intent.payload["action"] == "create"
+    assert intent.payload["summary"] == "Sunum"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_calendar_create_missing_fields() -> None:
+    raw = {"type": "calendar", "payload": {"action": "create", "summary": "x"}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("toplantı ekle")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_on_unsupported_calendar_action() -> None:
+    raw = {"type": "calendar", "payload": {"action": "delete", "event_id": "e1"}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("toplantıyı sil")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_classifier_includes_now_in_system_prompt() -> None:
+    """The model needs the current timestamp to resolve "yarın", "Cuma", etc.
+    Verify that whatever ``now_factory`` returns ends up in the prompt."""
+    from datetime import datetime
+
+    captured: dict[str, str] = {}
+
+    async def fake_generate_json(prompt, *, system=None):
+        captured["system"] = system or ""
+        return {"type": "fallback", "payload": {}}
+
+    client = _gemini_returning_text(json.dumps({"type": "fallback", "payload": {}}))
+    client.generate_json = fake_generate_json  # type: ignore[method-assign]
+
+    frozen = datetime(2026, 4, 27, 9, 30, tzinfo=UTC)
+    classifier = Classifier(client, now_factory=lambda: frozen)
+    await classifier.classify("yarın toplantı ekle")
+    assert "2026-04-27T09:30:00+00:00" in captured["system"]
