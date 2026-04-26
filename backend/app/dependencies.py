@@ -12,6 +12,7 @@ from pathlib import Path
 from app.config import get_settings
 from capabilities.calendar.adapter import CalendarAdapter
 from capabilities.calendar.strategy import CalendarStrategy
+from capabilities.document.strategy import DocumentStrategy
 from capabilities.gmail.adapter import GmailAdapter
 from capabilities.gmail.classifier import EmailClassifier
 from capabilities.gmail.draft import DraftGenerator
@@ -82,6 +83,20 @@ def _build_sandbox_root() -> Path:
 
 def get_sandbox_root() -> Path:
     return _build_sandbox_root()
+
+
+@lru_cache(maxsize=1)
+def _build_document_strategy() -> DocumentStrategy:
+    return DocumentStrategy(
+        store=_build_document_store(),
+        gemini=_build_gemini_client(),
+    )
+
+
+def get_document_strategy() -> DocumentStrategy:
+    strategy = _build_document_strategy()
+    _ensure_registered(strategy)
+    return strategy
 
 
 def _ensure_registered(strategy) -> None:
