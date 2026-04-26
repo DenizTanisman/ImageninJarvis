@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { useState } from "react";
 
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import type { CapabilityKey } from "@/components/ShortcutBar";
 
-import { CalendarForm, type CalendarDraft } from "./CalendarForm";
+import { CalendarForm } from "./CalendarForm";
 import { DocumentCard } from "./DocumentCard";
 import { EventList } from "./EventList";
 import { MailCard } from "./MailCard";
@@ -22,16 +22,16 @@ interface CapabilityModalProps {
 
 const META: Record<CapabilityKey, { title: string; description: string }> = {
   mail: {
-    title: "Mail — günlük özet (mock)",
-    description: "Kategori kategori ayrılmış son mailler. Step 2'de gerçek Gmail verisi.",
+    title: "Mail — günlük özet",
+    description: "Kategori kategori ayrılmış son mailler.",
   },
   translation: {
     title: "Çeviri",
     description: "Kaynak dili ve hedef dili seç, metni yapıştır, Gemini çevirir.",
   },
   calendar: {
-    title: "Takvim (mock)",
-    description: "Etkinlik oluştur veya yaklaşan etkinlikleri gör. Step 4'te Google Calendar.",
+    title: "Takvim",
+    description: "Etkinlik oluştur veya 7 günlük ajandayı gör.",
   },
   document: {
     title: "Döküman (mock)",
@@ -41,15 +41,14 @@ const META: Record<CapabilityKey, { title: string; description: string }> = {
 
 export function CapabilityModal({ capability, onOpenChange }: CapabilityModalProps) {
   const meta = capability ? META[capability] : null;
-
-  const handleCalendarSubmit = (draft: CalendarDraft) => {
-    toast.info("Takvim CRUD Step 4'te devreye girecek.", { duration: 2500 });
-    onOpenChange(false);
-    void draft;
-  };
+  const [calendarReloadKey, setCalendarReloadKey] = useState(0);
 
   const handleMailReply = () => {
     // MailCard switches to its inline BatchReplyView; nothing to do here.
+  };
+
+  const handleEventCreated = () => {
+    setCalendarReloadKey((k) => k + 1);
   };
 
   return (
@@ -69,12 +68,12 @@ export function CapabilityModal({ capability, onOpenChange }: CapabilityModalPro
             {capability === "translation" && <TranslationCard />}
             {capability === "calendar" && (
               <div className="space-y-5">
-                <CalendarForm onSubmit={handleCalendarSubmit} />
+                <CalendarForm onCreated={handleEventCreated} />
                 <div>
                   <h3 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
                     Yaklaşan etkinlikler
                   </h3>
-                  <EventList />
+                  <EventList reloadKey={calendarReloadKey} />
                 </div>
               </div>
             )}

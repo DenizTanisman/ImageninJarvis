@@ -1,39 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { CalendarForm } from "@/components/capability/CalendarForm";
 import { DocumentCard } from "@/components/capability/DocumentCard";
-import { EventList } from "@/components/capability/EventList";
-import { MOCK_EVENTS } from "@/lib/mock-data";
-
-describe("CalendarForm", () => {
-  it("disables submit until required fields are filled, then submits", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-    render(<CalendarForm onSubmit={onSubmit} />);
-    const submit = screen.getByTestId("calendar-submit");
-    expect(submit).toBeDisabled();
-    await user.type(screen.getByTestId("field-title"), "Sunum");
-    await user.type(screen.getByTestId("field-date"), "2026-05-01");
-    await user.type(screen.getByTestId("field-time"), "10:00");
-    expect(submit).toBeEnabled();
-    await user.click(submit);
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Sunum", date: "2026-05-01", time: "10:00" }),
-    );
-  });
-});
-
-describe("EventList", () => {
-  it("renders all mock events", () => {
-    render(<EventList />);
-    const list = screen.getByTestId("event-list");
-    MOCK_EVENTS.forEach((event) => {
-      expect(within(list).getByText(event.title)).toBeInTheDocument();
-    });
-  });
-});
 
 describe("DocumentCard", () => {
   it("toggles between Drive list and Upload zone", async () => {

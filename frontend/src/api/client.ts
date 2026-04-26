@@ -140,6 +140,66 @@ export async function translate(
   return postJson<TranslationResponse>("/translation", body, signal);
 }
 
+export interface CalendarEventDTO {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  description: string;
+  html_link: string;
+}
+
+export interface CalendarListData {
+  events: CalendarEventDTO[];
+  days: number;
+}
+
+export type CalendarResponse =
+  | { ok: true; ui_type: "EventList"; data: CalendarListData; meta?: Record<string, unknown> | null }
+  | { ok: true; ui_type: "CalendarEvent"; data: CalendarEventDTO; meta?: { action: "create" | "update" } | null }
+  | { ok: true; ui_type: "text"; data: { event_id: string }; meta?: { action: "delete" } | null }
+  | ChatErrorResponse;
+
+export interface CalendarCreatePayload {
+  action: "create";
+  summary: string;
+  start: string;
+  end: string;
+  description?: string;
+}
+
+export interface CalendarUpdatePayload {
+  action: "update";
+  event_id: string;
+  summary?: string;
+  start?: string;
+  end?: string;
+  description?: string;
+}
+
+export interface CalendarDeletePayload {
+  action: "delete";
+  event_id: string;
+}
+
+export interface CalendarListPayload {
+  action: "list";
+  days?: number;
+}
+
+type CalendarPayload =
+  | CalendarListPayload
+  | CalendarCreatePayload
+  | CalendarUpdatePayload
+  | CalendarDeletePayload;
+
+export async function callCalendar(
+  body: CalendarPayload,
+  signal?: AbortSignal,
+): Promise<CalendarResponse> {
+  return postJson<CalendarResponse>("/calendar", body, signal);
+}
+
 async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
