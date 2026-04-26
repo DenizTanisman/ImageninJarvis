@@ -13,6 +13,7 @@ from capabilities.gmail.adapter import GmailAdapter
 from capabilities.gmail.classifier import EmailClassifier
 from capabilities.gmail.draft import DraftGenerator
 from capabilities.gmail.strategy import MailStrategy
+from capabilities.translation.strategy import TranslationStrategy
 from core.classifier import Classifier
 from core.dispatcher import Dispatcher
 from core.registry import default_registry
@@ -24,16 +25,22 @@ from services.token_store import TokenStore
 
 @lru_cache(maxsize=1)
 def _build_default_dispatcher() -> Dispatcher:
-    settings = get_settings()
-    gemini = GeminiClient(
-        api_key=settings.gemini_api_key,
-        model_name=settings.gemini_model,
-    )
+    gemini = _build_gemini_client()
+    # Eagerly register strategies that the dispatcher (chat / voice path)
+    # needs to discover via the classifier. Mail still ships its own
+    # registration through get_mail_strategy because the /mail/summary
+    # route bypasses the classifier and constructs it directly.
+    _ensure_registered(TranslationStrategy(gemini))
     return Dispatcher(
-        classifier=Classifier(),
+        classifier=Classifier(gemini),
         registry=default_registry,
         gemini=gemini,
     )
+
+
+def _ensure_registered(strategy) -> None:
+    if all(s.name != strategy.name for s in default_registry.all()):
+        default_registry.register(strategy)
 
 
 def get_dispatcher() -> Dispatcher:
@@ -92,8 +99,7 @@ def _build_mail_strategy() -> MailStrategy:
 
 def get_mail_strategy() -> MailStrategy:
     strategy = _build_mail_strategy()
-    if all(s.name != strategy.name for s in default_registry.all()):
-        default_registry.register(strategy)
+    _ensure_registered(strategy)
     return strategy
 
 
