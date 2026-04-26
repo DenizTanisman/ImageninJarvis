@@ -5,9 +5,13 @@ import pytest
 from cryptography.fernet import Fernet
 
 from services.auth_oauth import (
+    ALL_SCOPES,
+    CALENDAR_SCOPES,
+    GMAIL_FULL_SCOPES,
     GMAIL_READONLY_SCOPES,
     GoogleOAuthService,
     OAuthError,
+    has_required_scopes,
 )
 from services.token_store import TokenStore
 
@@ -131,3 +135,16 @@ def test_credentials_for_returns_credentials_when_stored(store: TokenStore) -> N
     assert creds is not None
     assert creds.refresh_token == "r"
     assert creds.token == "a"
+
+
+def test_default_scopes_include_gmail_and_calendar() -> None:
+    """Step 4.1: a fresh OAuth grant must request calendar.events alongside
+    gmail so the user only sees one consent screen for everything."""
+    assert set(GMAIL_FULL_SCOPES).issubset(set(ALL_SCOPES))
+    assert set(CALENDAR_SCOPES).issubset(set(ALL_SCOPES))
+
+
+def test_has_required_scopes_recognizes_calendar_subset() -> None:
+    granted = list(GMAIL_FULL_SCOPES) + list(CALENDAR_SCOPES)
+    assert has_required_scopes(granted, CALENDAR_SCOPES)
+    assert not has_required_scopes(GMAIL_READONLY_SCOPES, CALENDAR_SCOPES)

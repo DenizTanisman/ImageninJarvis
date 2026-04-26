@@ -29,8 +29,9 @@ from google_auth_oauthlib.flow import Flow  # noqa: E402
 from .token_store import TokenStore  # noqa: E402
 
 # Capability scope groups. We pass the union to Google so the user
-# consents once for everything Step 2 needs; future capabilities (calendar,
-# drive) will trigger a re-consent the first time they're requested.
+# consents once for everything Jarvis needs; adding a new capability
+# (e.g. drive in Step 5) appends to ALL_SCOPES and the next "Connect
+# Google" click triggers a re-consent that includes the new scope.
 GMAIL_READONLY_SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/gmail.readonly",
 )
@@ -38,6 +39,10 @@ GMAIL_SEND_SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/gmail.send",
 )
 GMAIL_FULL_SCOPES: tuple[str, ...] = GMAIL_READONLY_SCOPES + GMAIL_SEND_SCOPES
+CALENDAR_SCOPES: tuple[str, ...] = (
+    "https://www.googleapis.com/auth/calendar.events",
+)
+ALL_SCOPES: tuple[str, ...] = GMAIL_FULL_SCOPES + CALENDAR_SCOPES
 DEFAULT_USER_ID = "default"
 
 
@@ -71,7 +76,7 @@ class GoogleOAuthService:
         client_secret: str,
         redirect_uri: str,
         token_store: TokenStore,
-        scopes: Iterable[str] = GMAIL_FULL_SCOPES,
+        scopes: Iterable[str] = ALL_SCOPES,
     ) -> None:
         if not client_id or not client_secret:
             raise OAuthError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required")

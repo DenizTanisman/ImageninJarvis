@@ -73,7 +73,12 @@ def test_auth_status_returns_disconnected_when_no_token(client: TestClient) -> N
     app.dependency_overrides[get_oauth_service] = lambda: fake
     response = client.get("/mail/auth-status")
     assert response.status_code == 200
-    assert response.json() == {"connected": False, "scopes": [], "can_send": False}
+    assert response.json() == {
+        "connected": False,
+        "scopes": [],
+        "can_send": False,
+        "can_calendar": False,
+    }
 
 
 def test_auth_status_returns_connected_when_token_present(client: TestClient) -> None:
@@ -88,3 +93,22 @@ def test_auth_status_returns_connected_when_token_present(client: TestClient) ->
     assert response.json()["scopes"] == [
         "https://www.googleapis.com/auth/gmail.readonly"
     ]
+    assert response.json()["can_calendar"] is False
+
+
+def test_auth_status_reports_can_calendar_when_calendar_scope_granted(
+    client: TestClient,
+) -> None:
+    fake = MagicMock()
+    fake.credentials_for.return_value = MagicMock(
+        scopes=[
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/calendar.events",
+        ]
+    )
+    app.dependency_overrides[get_oauth_service] = lambda: fake
+    response = client.get("/mail/auth-status")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["can_calendar"] is True
+    assert body["can_send"] is False

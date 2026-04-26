@@ -29,6 +29,7 @@ from capabilities.gmail.draft import DraftGenerator, DraftGeneratorError
 from capabilities.gmail.strategy import MailStrategy
 from core.result import Error, Success
 from services.auth_oauth import (
+    CALENDAR_SCOPES,
     GMAIL_SEND_SCOPES,
     GoogleOAuthService,
     has_required_scopes,
@@ -77,12 +78,14 @@ class AuthStatusResponse(BaseModel):
     connected: bool
     scopes: list[str] = []
     can_send: bool = False
+    can_calendar: bool = False
 
 
 @router.get("/auth-status", response_model=AuthStatusResponse)
 async def auth_status(oauth: OAuthDep) -> AuthStatusResponse:
     """Lightweight check used by the frontend to decide whether to show
-    the "Connect Google" prompt."""
+    the "Connect Google" prompt — and per-capability flags so each card
+    can prompt for re-consent independently when a new scope ships."""
     creds = None
     try:
         creds = oauth.credentials_for()
@@ -95,6 +98,7 @@ async def auth_status(oauth: OAuthDep) -> AuthStatusResponse:
         connected=True,
         scopes=granted,
         can_send=has_required_scopes(granted, GMAIL_SEND_SCOPES),
+        can_calendar=has_required_scopes(granted, CALENDAR_SCOPES),
     )
 
 
