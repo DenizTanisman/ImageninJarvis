@@ -10,6 +10,7 @@ from app.routes.calendar import router as calendar_router
 from app.routes.chat import router as chat_router
 from app.routes.mail import router as mail_router
 from app.routes.translation import router as translation_router
+from app.routes.upload import router as upload_router
 
 settings = get_settings()
 
@@ -38,3 +39,4 @@ app.include_router(auth_router)
 app.include_router(mail_router)
 app.include_router(translation_router)
 app.include_router(calendar_router)
+app.include_router(upload_router)

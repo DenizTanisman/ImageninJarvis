@@ -45,6 +45,9 @@ class Settings:
     database_url: str = field(
         default_factory=lambda: os.getenv("DATABASE_URL", "sqlite:///./jarvis.db")
     )
+    sandbox_dir: str = field(
+        default_factory=lambda: os.getenv("JARVIS_SANDBOX_DIR", "/tmp/jarvis_sandbox")
+    )
 
     @property
     def sqlite_path(self) -> str:

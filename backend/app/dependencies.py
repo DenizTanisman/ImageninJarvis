@@ -7,6 +7,7 @@ the test runner does not require real Google credentials.
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from app.config import get_settings
 from capabilities.calendar.adapter import CalendarAdapter
@@ -21,6 +22,7 @@ from core.dispatcher import Dispatcher
 from core.registry import default_registry
 from services.auth_oauth import GoogleOAuthService
 from services.cache_sqlite import EmailCache
+from services.document_store import DocumentStore
 from services.gemini_client import GeminiClient
 from services.token_store import TokenStore
 
@@ -59,6 +61,27 @@ def get_calendar_adapter_factory():
     real google-api-python-client never gets touched.
     """
     return lambda creds: CalendarAdapter(creds)
+
+
+@lru_cache(maxsize=1)
+def _build_document_store() -> DocumentStore:
+    return DocumentStore()
+
+
+def get_document_store() -> DocumentStore:
+    return _build_document_store()
+
+
+@lru_cache(maxsize=1)
+def _build_sandbox_root() -> Path:
+    settings = get_settings()
+    root = Path(settings.sandbox_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def get_sandbox_root() -> Path:
+    return _build_sandbox_root()
 
 
 def _ensure_registered(strategy) -> None:
