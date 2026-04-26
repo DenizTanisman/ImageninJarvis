@@ -30,6 +30,7 @@ from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
 from app.dependencies import get_document_store, get_sandbox_root
+from capabilities.document.parser import DocumentParseError, parse_and_chunk
 from services.document_store import DocumentMeta, DocumentStore
 
 logger = logging.getLogger(__name__)
@@ -85,9 +86,18 @@ async def upload(
         file_path=str(target_path),
     )
     store.register(meta)
+    try:
+        chunks = parse_and_chunk(file_path=target_path, mime_type=mime)
+    except DocumentParseError as exc:
+        store.forget(doc_id)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    store.attach_chunks(doc_id, chunks)
     logger.info(
-        "Document uploaded doc_id=%s name=%s mime=%s pages=%d size=%d",
-        doc_id, safe_name, mime, page_count, len(raw),
+        "Document uploaded doc_id=%s name=%s mime=%s pages=%d size=%d chunks=%d",
+        doc_id, safe_name, mime, page_count, len(raw), len(chunks),
     )
     return UploadResponse(
         doc_id=doc_id,

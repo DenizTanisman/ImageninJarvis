@@ -69,6 +69,23 @@ def test_upload_txt_returns_page_count_one(
     assert body["page_count"] == 1
 
 
+def test_upload_attaches_chunks_to_doc_store(
+    client: TestClient, store: DocumentStore
+) -> None:
+    """5.4: upload calls parser → attach_chunks; QA strategy will read
+    these later without re-parsing."""
+    txt = ("Bu bir paragraf.\n" * 600).encode("utf-8")
+    response = client.post(
+        "/upload",
+        files={"file": ("doc.txt", txt, "text/plain")},
+    )
+    assert response.status_code == 200
+    meta = store.get(response.json()["doc_id"])
+    assert len(meta.chunks) >= 1
+    # Combined chunk content covers the whole document.
+    assert "Bu bir paragraf." in meta.chunks[0]
+
+
 def test_upload_rejects_unsupported_mime_via_content_sniffing(
     client: TestClient,
 ) -> None:
