@@ -11,9 +11,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { ShortcutBar, type CapabilityKey } from "@/components/ShortcutBar";
 import { useConversation } from "@/store/conversation";
 
-const STEP_TOAST: Record<CapabilityKey, string> = {
-  mail: "Mail özeti Step 2'de gelecek.",
-  translation: "Çeviri Step 3'te gelecek.",
+const STEP_TOAST: Partial<Record<CapabilityKey, string>> = {
   calendar: "Takvim Step 4'te gelecek.",
   document: "Döküman Q&A Step 5'te gelecek.",
 };
@@ -42,11 +40,7 @@ export function ChatScreen() {
     try {
       const result = await sendChat(text);
       if (result.ok) {
-        const reply =
-          typeof result.data === "string"
-            ? result.data
-            : JSON.stringify(result.data);
-        addMessage("assistant", reply);
+        addMessage("assistant", formatChatReply(result.ui_type, result.data));
       } else {
         addMessage("assistant", result.error.user_message);
         toast.error(result.error.user_message, { duration: 3000 });
@@ -65,7 +59,10 @@ export function ChatScreen() {
 
   const handleShortcut = (key: CapabilityKey) => {
     setActiveCapability(key);
-    toast.info(STEP_TOAST[key], { duration: 2500 });
+    const toastText = STEP_TOAST[key];
+    if (toastText) {
+      toast.info(toastText, { duration: 2500 });
+    }
   };
 
   const handleVoicePress = () => {
@@ -125,5 +122,24 @@ export function ChatScreen() {
         onOpenChange={(open) => !open && setActiveCapability(null)}
       />
     </div>
+  );
+}
+
+function formatChatReply(uiType: string, data: unknown): string {
+  if (uiType === "TranslationCard" && isTranslationData(data)) {
+    return `**${data.target_lang.toUpperCase()}**: ${data.translated_text}`;
+  }
+  if (typeof data === "string") return data;
+  return JSON.stringify(data);
+}
+
+function isTranslationData(
+  value: unknown,
+): value is { translated_text: string; target_lang: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Record<string, unknown>).translated_text === "string" &&
+    typeof (value as Record<string, unknown>).target_lang === "string"
   );
 }

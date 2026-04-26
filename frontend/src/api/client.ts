@@ -122,6 +122,24 @@ export function googleConnectUrl(): string {
   return `${API_BASE_URL}/auth/google/start`;
 }
 
+export interface TranslationData {
+  source_text: string;
+  translated_text: string;
+  source_lang: string;
+  target_lang: string;
+}
+
+export type TranslationResponse =
+  | { ok: true; ui_type: string; data: TranslationData; meta?: Record<string, unknown> | null }
+  | ChatErrorResponse;
+
+export async function translate(
+  body: { text: string; source: string; target: string },
+  signal?: AbortSignal,
+): Promise<TranslationResponse> {
+  return postJson<TranslationResponse>("/translation", body, signal);
+}
+
 async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {

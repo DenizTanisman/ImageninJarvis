@@ -8,6 +8,7 @@ from app.config import get_settings
 from app.routes.auth import router as auth_router
 from app.routes.chat import router as chat_router
 from app.routes.mail import router as mail_router
+from app.routes.translation import router as translation_router
 
 settings = get_settings()
 
@@ -34,3 +35,4 @@ async def health() -> dict[str, str]:
 app.include_router(chat_router)
 app.include_router(auth_router)
 app.include_router(mail_router)
+app.include_router(translation_router)

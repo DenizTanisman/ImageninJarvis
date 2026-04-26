@@ -26,8 +26,8 @@ const META: Record<CapabilityKey, { title: string; description: string }> = {
     description: "Kategori kategori ayrılmış son mailler. Step 2'de gerçek Gmail verisi.",
   },
   translation: {
-    title: "Çeviri (mock)",
-    description: "Kaynak dili ve hedef dili seç. Step 3'te Gemini ile çalışacak.",
+    title: "Çeviri",
+    description: "Kaynak dili ve hedef dili seç, metni yapıştır, Gemini çevirir.",
   },
   calendar: {
     title: "Takvim (mock)",

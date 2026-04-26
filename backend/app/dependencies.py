@@ -119,3 +119,14 @@ def get_gmail_adapter_factory():
     real google-api-python-client never gets touched.
     """
     return lambda creds: GmailAdapter(creds)
+
+
+@lru_cache(maxsize=1)
+def _build_translation_strategy() -> TranslationStrategy:
+    return TranslationStrategy(_build_gemini_client())
+
+
+def get_translation_strategy() -> TranslationStrategy:
+    strategy = _build_translation_strategy()
+    _ensure_registered(strategy)
+    return strategy

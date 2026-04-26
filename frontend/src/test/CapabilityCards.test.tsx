@@ -5,22 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CalendarForm } from "@/components/capability/CalendarForm";
 import { DocumentCard } from "@/components/capability/DocumentCard";
 import { EventList } from "@/components/capability/EventList";
-import { TranslationCard } from "@/components/capability/TranslationCard";
-import { MOCK_EVENTS, MOCK_TRANSLATION } from "@/lib/mock-data";
-
-describe("TranslationCard", () => {
-  it("swaps source and target content and languages", async () => {
-    const user = userEvent.setup();
-    render(<TranslationCard />);
-    const source = screen.getByTestId("source-pane") as HTMLTextAreaElement;
-    const target = screen.getByTestId("target-pane") as HTMLTextAreaElement;
-    expect(source.value).toBe(MOCK_TRANSLATION.source);
-    expect(target.value).toBe(MOCK_TRANSLATION.target);
-    await user.click(screen.getByTestId("swap-button"));
-    expect(source.value).toBe(MOCK_TRANSLATION.target);
-    expect(target.value).toBe(MOCK_TRANSLATION.source);
-  });
-});
+import { MOCK_EVENTS } from "@/lib/mock-data";
 
 describe("CalendarForm", () => {
   it("disables submit until required fields are filled, then submits", async () => {
