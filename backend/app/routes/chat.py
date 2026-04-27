@@ -10,6 +10,7 @@ from app.dependencies import get_dispatcher
 from app.schemas import ChatErrorPayload, ChatRequest, ChatResponse
 from core.dispatcher import Dispatcher
 from core.result import Error, Success
+from core.voice_formatter import format_for_voice
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,17 @@ DispatcherDep = Annotated[Dispatcher, Depends(get_dispatcher)]
 async def chat(request: ChatRequest, dispatcher: DispatcherDep) -> ChatResponse:
     result = await dispatcher.handle(request.text)
     if isinstance(result, Success):
+        # Step 6.1: every chat reply carries a short Turkish summary the
+        # voice surface can pipe straight to TTS without inspecting the
+        # structured payload. Chat surface ignores it.
+        voice_summary = format_for_voice(result.ui_type, result.data)
+        meta = dict(result.meta or {})
+        meta["voice_summary"] = voice_summary
         return ChatResponse(
             ok=True,
             ui_type=result.ui_type,
             data=result.data,
-            meta=result.meta or None,
+            meta=meta,
         )
     assert isinstance(result, Error)
     if result.user_notify:

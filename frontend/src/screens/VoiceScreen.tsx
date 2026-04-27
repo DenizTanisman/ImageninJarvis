@@ -10,7 +10,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { ChatNetworkError, sendChat } from "@/api/client";
+import {
+  ChatNetworkError,
+  sendChat,
+  type ChatSuccessResponse,
+} from "@/api/client";
 import { BotAvatar } from "@/components/BotAvatar";
 import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -43,9 +47,7 @@ export function VoiceScreen() {
       try {
         const result = await sendChat(text);
         const reply = result.ok
-          ? typeof result.data === "string"
-            ? result.data
-            : JSON.stringify(result.data)
+          ? pickVoiceReply(result)
           : result.error.user_message;
         addMessage("assistant", reply);
         synth.speak(reply);
@@ -63,14 +65,20 @@ export function VoiceScreen() {
     [addMessage, isSending, synth],
   );
 
-  const handleError = useCallback((code: string) => {
-    const msg = ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unknown;
-    if (code === "no-speech") {
-      toast.info(msg, { duration: 2500 });
-    } else {
-      toast.error(msg, { duration: 3500 });
-    }
-  }, []);
+  const handleError = useCallback(
+    (code: string) => {
+      const msg = ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unknown;
+      if (code === "no-speech") {
+        toast.info(msg, { duration: 2500 });
+        // Spec §6.3: nudge the user via TTS so the conversational loop
+        // stays mode-agnostic instead of silently failing.
+        synth.speak(msg);
+      } else {
+        toast.error(msg, { duration: 3500 });
+      }
+    },
+    [synth],
+  );
 
   const recognition = useSpeechRecognition({
     onFinal: handleFinal,
@@ -83,6 +91,15 @@ export function VoiceScreen() {
     recognition.start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recognition.isSupported]);
+
+  // Spec §6.3: barge-in — once the user starts talking (first interim
+  // transcript token), cut the assistant's TTS so the user doesn't have
+  // to wait for it to finish.
+  useEffect(() => {
+    if (recognition.interimTranscript && synth.isSpeaking) {
+      synth.cancel();
+    }
+  }, [recognition.interimTranscript, synth]);
 
   const toggleMic = () => {
     if (recognition.isListening) {
@@ -212,4 +229,15 @@ export function VoiceScreen() {
       </button>
     </main>
   );
+}
+
+function pickVoiceReply(result: ChatSuccessResponse): string {
+  const summary = result.meta?.voice_summary;
+  if (typeof summary === "string" && summary.trim()) {
+    return summary;
+  }
+  if (typeof result.data === "string") {
+    return result.data;
+  }
+  return "İşlem tamamlandı.";
 }
