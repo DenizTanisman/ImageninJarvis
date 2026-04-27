@@ -25,13 +25,14 @@ Bağlam:
 
 Şema:
 {{
-  "type": "translation" | "calendar" | "fallback",
+  "type": "translation" | "calendar" | "mail" | "fallback",
   "payload": {{ ... }}   // type'a göre değişir
 }}
 
 Kurallar:
 - Yalnızca açıkça çeviri istendiğinde "translation" seç.
 - Yalnızca açıkça takvim isteği varsa "calendar" seç.
+- Mail / e-posta / inbox / gelen kutusu özetlemesi isteniyorsa "mail" seç.
 - Belirsizse "fallback".
 
 Çeviri için payload:
@@ -48,6 +49,14 @@ Takvim için payload:
   - Sadece tarih verilmişse 09:00 - 10:00 varsay (saat soruyorsan fallback).
   - update veya delete intent'leri için her zaman "fallback" döndür — bu
     işler ekrandaki etkinlik listesinden yapılıyor.
+
+Mail için payload:
+  {{"range_kind": "daily" | "weekly"}}
+  - "Bugünün mailleri / inbox / gelen kutusu / e-postalar" → "daily".
+  - "Bu haftaki mailler / haftalık özet" → "weekly".
+  - Belirli bir tarih aralığı (özel range) chat / voice'tan istenirse
+    "fallback" döndür — kullanıcı shortcut'tan custom range seçmeli.
+  - Tarih hesabı backend tarafında yapılıyor; sen sadece range_kind ver.
 
 type "fallback" ise payload boş obje ({{}}).
 
@@ -73,6 +82,15 @@ Cevap: {{"type":"calendar","payload":{{"action":"create","summary":"Q2 review","
 
 Mesaj: "Cuma 10:00'da Sample Project sync ekle"
 Cevap: {{"type":"calendar","payload":{{"action":"create","summary":"Sample Project sync","start":"<gelen-cuma>T10:00:00+03:00","end":"<gelen-cuma>T11:00:00+03:00","description":""}}}}
+
+Mesaj: "bugünün maillerini özetle"
+Cevap: {{"type":"mail","payload":{{"range_kind":"daily"}}}}
+
+Mesaj: "inbox'ta ne var"
+Cevap: {{"type":"mail","payload":{{"range_kind":"daily"}}}}
+
+Mesaj: "bu haftaki maillerime bir bak"
+Cevap: {{"type":"mail","payload":{{"range_kind":"weekly"}}}}
 
 Mesaj: "merhaba nasılsın"
 Cevap: {{"type":"fallback","payload":{{}}}}

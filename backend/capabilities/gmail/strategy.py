@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from core.base_strategy import CapabilityStrategy
@@ -13,6 +14,12 @@ from services.cache_sqlite import EmailCache, build_mail_key
 from .adapter import GmailAdapter, GmailAdapterError
 from .classifier import EmailClassifier, EmailClassifierError
 from .models import MailSummary
+
+# Voice / chat intents arrive without explicit dates — the LLM gives us
+# range_kind and we compute the window. Daily = today, Weekly = past 7
+# days. Gmail's "before" filter is inclusive of date strings on the day
+# boundary, so we use "tomorrow" as the upper bound to include today.
+DEFAULT_WEEKLY_DAYS = 7
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +35,7 @@ class MailStrategy(CapabilityStrategy):
         classifier: EmailClassifier,
         cache: EmailCache,
         adapter_factory=None,
+        now_factory=None,
     ) -> None:
         self._oauth = oauth
         self._classifier = classifier
@@ -35,6 +43,9 @@ class MailStrategy(CapabilityStrategy):
         # Tests can inject ``adapter_factory(credentials) -> GmailAdapter`` to
         # avoid the real google-api-python-client build call.
         self._adapter_factory = adapter_factory or (lambda creds: GmailAdapter(creds))
+        # Tests freeze "today" so date defaulting is deterministic; runtime
+        # uses the wall clock.
+        self._now_factory = now_factory or (lambda: datetime.now(UTC).date())
 
     def can_handle(self, intent: dict[str, Any]) -> bool:
         return intent.get("type") == "mail"
@@ -43,13 +54,18 @@ class MailStrategy(CapabilityStrategy):
         kind = payload.get("range_kind", "daily")
         after = payload.get("after")
         before = payload.get("before")
+        # Voice / chat intents only ship range_kind; compute the window
+        # from "today" so the dispatcher path doesn't need to know dates.
         if not after or not before:
-            return Error(
-                message="missing range bounds",
-                user_message="Mail aralığı belirtilmedi.",
-                user_notify=True,
-                log_level="warning",
-            )
+            computed = _resolve_range(kind, today=self._now_factory())
+            if computed is None:
+                return Error(
+                    message="missing range bounds",
+                    user_message="Mail aralığı belirtilmedi.",
+                    user_notify=True,
+                    log_level="warning",
+                )
+            after, before = computed
         max_results = int(payload.get("max_results") or 30)
         user_id = payload.get("user_id", "default")
 
@@ -137,3 +153,18 @@ class MailStrategy(CapabilityStrategy):
 
 def serialize_mail_summary(mail: MailSummary) -> dict[str, Any]:
     return asdict(mail)
+
+
+def _resolve_range(kind: Any, *, today: date) -> tuple[str, str] | None:
+    """Convert ``range_kind`` into Gmail-search-compatible YYYY-MM-DD
+    bounds. ``custom`` requires explicit dates the caller already
+    provided, so an unresolved custom returns None to trigger the
+    "missing bounds" error path."""
+    if kind == "daily":
+        after = today
+    elif kind == "weekly":
+        after = today - timedelta(days=DEFAULT_WEEKLY_DAYS - 1)
+    else:
+        return None
+    before = today + timedelta(days=1)
+    return after.isoformat(), before.isoformat()

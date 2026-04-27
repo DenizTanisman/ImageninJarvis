@@ -61,12 +61,13 @@ def _adapter_returning(mails: list[MailSummary]) -> MagicMock:
     return adapter
 
 
-def _strategy(*, oauth, classifier, cache, adapter) -> MailStrategy:
+def _strategy(*, oauth, classifier, cache, adapter, now_factory=None) -> MailStrategy:
     return MailStrategy(
         oauth=oauth,
         classifier=classifier,
         cache=cache,
         adapter_factory=lambda creds: adapter,
+        now_factory=now_factory,
     )
 
 
@@ -87,7 +88,11 @@ async def test_returns_error_when_user_not_connected(cache: EmailCache) -> None:
 
 
 @pytest.mark.asyncio
-async def test_returns_error_when_range_missing(cache: EmailCache) -> None:
+async def test_returns_error_when_range_kind_unknown(cache: EmailCache) -> None:
+    """Custom range without explicit dates can't be auto-resolved — the
+    /mail/summary shortcut always sends explicit dates, but the chat /
+    voice path goes through the classifier which only ships
+    daily / weekly. Anything else falls into the "missing bounds" error."""
     oauth = _oauth_with_credentials(MagicMock())
     strategy = _strategy(
         oauth=oauth,
@@ -95,8 +100,56 @@ async def test_returns_error_when_range_missing(cache: EmailCache) -> None:
         cache=cache,
         adapter=_adapter_returning([]),
     )
-    result = await strategy.execute({"range_kind": "daily"})
+    result = await strategy.execute({"range_kind": "custom"})
     assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_resolves_daily_range_from_today_when_dates_omitted(
+    cache: EmailCache,
+) -> None:
+    """Voice / chat intents only ship range_kind; the strategy must
+    compute YYYY-MM-DD bounds itself."""
+    import datetime as _dt
+
+    frozen = _dt.date(2026, 4, 27)
+    adapter = _adapter_returning([])
+    strategy = _strategy(
+        oauth=_oauth_with_credentials(MagicMock()),
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter=adapter,
+        now_factory=lambda: frozen,
+    )
+    result = await strategy.execute({"range_kind": "daily"})
+    assert isinstance(result, Success)
+    adapter_inst = strategy._adapter_factory(MagicMock())
+    # Adapter was called with today=2026-04-27, before=2026-04-28
+    adapter_inst.list_messages.assert_called()
+    kwargs = adapter_inst.list_messages.call_args.kwargs
+    assert kwargs["after"] == "2026-04-27"
+    assert kwargs["before"] == "2026-04-28"
+
+
+@pytest.mark.asyncio
+async def test_resolves_weekly_range_to_last_seven_days(cache: EmailCache) -> None:
+    import datetime as _dt
+
+    frozen = _dt.date(2026, 4, 27)
+    adapter = _adapter_returning([])
+    strategy = _strategy(
+        oauth=_oauth_with_credentials(MagicMock()),
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter=adapter,
+        now_factory=lambda: frozen,
+    )
+    result = await strategy.execute({"range_kind": "weekly"})
+    assert isinstance(result, Success)
+    adapter_inst = strategy._adapter_factory(MagicMock())
+    kwargs = adapter_inst.list_messages.call_args.kwargs
+    assert kwargs["after"] == "2026-04-21"
+    assert kwargs["before"] == "2026-04-28"
 
 
 @pytest.mark.asyncio

@@ -27,9 +27,11 @@ SUPPORTED_INTENT_TYPES: tuple[IntentType, ...] = (
     "fallback",
     "translation",
     "calendar",
+    "mail",
 )
 ISTANBUL = UTC  # Gemini handles tz inside the prompt; pass UTC base
 CALENDAR_VALID_ACTIONS: tuple[str, ...] = ("list", "create")
+MAIL_VALID_RANGE_KINDS: tuple[str, ...] = ("daily", "weekly")
 
 
 @dataclass(frozen=True)
@@ -92,6 +94,10 @@ def _coerce_intent(raw: object, cleaned_text: str) -> Intent:
         logger.info("Calendar intent missing required payload, falling back.")
         return Intent(type="fallback", text=cleaned_text, payload={})
 
+    if intent_type == "mail" and not _valid_mail_payload(payload):
+        logger.info("Mail intent missing required payload, falling back.")
+        return Intent(type="fallback", text=cleaned_text, payload={})
+
     return Intent(type=intent_type, text=cleaned_text, payload=payload)  # type: ignore[arg-type]
 
 
@@ -116,3 +122,10 @@ def _valid_calendar_payload(payload: dict[str, Any]) -> bool:
             isinstance(v, str) and bool(v.strip()) for v in (summary, start, end)
         )
     return True  # list has no required fields beyond action
+
+
+def _valid_mail_payload(payload: dict[str, Any]) -> bool:
+    """Mail intents must specify a supported range_kind. Dates are
+    computed by MailStrategy from today, so the classifier never needs
+    to produce them."""
+    return payload.get("range_kind") in MAIL_VALID_RANGE_KINDS
