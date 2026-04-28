@@ -37,7 +37,11 @@ LANG_LABEL: dict[str, str] = {
 }
 
 
-def format_for_voice(ui_type: str | None, data: Any) -> str:
+def format_for_voice(
+    ui_type: str | None,
+    data: Any,
+    meta: dict[str, Any] | None = None,
+) -> str:
     if ui_type == "MailCard":
         return _format_mail(data)
     if ui_type == "TranslationCard":
@@ -45,7 +49,7 @@ def format_for_voice(ui_type: str | None, data: Any) -> str:
     if ui_type == "EventList":
         return _format_event_list(data)
     if ui_type == "CalendarEvent":
-        return _format_calendar_event(data)
+        return _format_calendar_event(data, meta)
     if ui_type == "DocumentAnswer":
         return _format_document_answer(data)
     if isinstance(data, str):
@@ -103,10 +107,22 @@ def _format_event_list(data: Any) -> str:
     )
 
 
-def _format_calendar_event(data: Any) -> str:
+def _format_calendar_event(data: Any, meta: dict[str, Any] | None = None) -> str:
     if not isinstance(data, dict):
         return "Etkinlik kaydedildi."
-    return f"Tamam, '{data.get('summary', 'etkinlik')}' kaydedildi."
+    summary = data.get("summary", "etkinlik")
+    action = (meta or {}).get("action")
+    if action == "delete_proposal":
+        # Chat surface shows a card with a Sil button; voice surface
+        # asks the user to confirm there since multi-turn voice delete
+        # confirmation is deferred to v2.
+        return (
+            f"'{summary}' etkinliğini silmek üzeresin. Sohbette kart "
+            "üzerinden onaylar mısın?"
+        )
+    if action == "update":
+        return f"'{summary}' güncellendi."
+    return f"Tamam, '{summary}' kaydedildi."
 
 
 def _format_document_answer(data: Any) -> str:

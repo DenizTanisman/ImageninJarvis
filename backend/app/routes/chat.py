@@ -26,7 +26,9 @@ async def chat(request: ChatRequest, dispatcher: DispatcherDep) -> ChatResponse:
         # Step 6.1: every chat reply carries a short Turkish summary the
         # voice surface can pipe straight to TTS without inspecting the
         # structured payload. Chat surface ignores it.
-        voice_summary = format_for_voice(result.ui_type, result.data)
+        voice_summary = format_for_voice(
+            result.ui_type, result.data, result.meta
+        )
         meta = dict(result.meta or {})
         meta["voice_summary"] = voice_summary
         return ChatResponse(

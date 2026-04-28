@@ -19,6 +19,7 @@ import {
   type UploadedDocDTO,
 } from "@/api/client";
 import { cn } from "@/lib/utils";
+import { useDocumentContext } from "@/store/document";
 
 type Tab = "drive" | "upload";
 
@@ -31,8 +32,18 @@ type Phase =
 export function DocumentCard() {
   const [tab, setTab] = useState<Tab>("upload");
   const [phase, setPhase] = useState<Phase>({ kind: "pick" });
+  const setActiveDoc = useDocumentContext((s) => s.setActiveDoc);
+  const clearActiveDoc = useDocumentContext((s) => s.clearActiveDoc);
 
-  const reset = () => setPhase({ kind: "pick" });
+  const reset = () => {
+    clearActiveDoc();
+    setPhase({ kind: "pick" });
+  };
+
+  const finishIngest = (doc: UploadedDocDTO) => {
+    setActiveDoc(doc);
+    setPhase({ kind: "ready", doc });
+  };
 
   if (phase.kind === "ready") {
     return <ReadyState doc={phase.doc} onReset={reset} />;
@@ -90,7 +101,7 @@ export function DocumentCard() {
           onSelected={(file) => {
             setPhase({ kind: "ingesting", source: "upload" });
             uploadDocument(file)
-              .then((doc) => setPhase({ kind: "ready", doc }))
+              .then(finishIngest)
               .catch((err) => {
                 const message =
                   err instanceof ChatNetworkError ? err.message : "Beklenmeyen hata.";
@@ -105,7 +116,7 @@ export function DocumentCard() {
           onPicked={(fileId) => {
             setPhase({ kind: "ingesting", source: "drive" });
             importDriveFile(fileId)
-              .then((doc) => setPhase({ kind: "ready", doc }))
+              .then(finishIngest)
               .catch((err) => {
                 const message =
                   err instanceof ChatNetworkError ? err.message : "Beklenmeyen hata.";

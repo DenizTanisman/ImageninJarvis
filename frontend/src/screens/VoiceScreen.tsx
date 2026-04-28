@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import {
+  askDocument,
   ChatNetworkError,
   sendChat,
   type ChatSuccessResponse,
@@ -20,6 +21,9 @@ import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { useConversation } from "@/store/conversation";
+import { useDocumentContext } from "@/store/document";
+
+const RICH_UI_TYPES = new Set(["MailCard", "CalendarEvent", "EventList"]);
 
 const ERROR_MESSAGES: Record<string, string> = {
   "not-allowed": "Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.",
@@ -35,6 +39,7 @@ export function VoiceScreen() {
   const navigate = useNavigate();
   const messageCount = useConversation((s) => s.messages.length);
   const addMessage = useConversation((s) => s.addMessage);
+  const activeDoc = useDocumentContext((s) => s.activeDoc);
 
   const [isSending, setIsSending] = useState(false);
   const synth = useSpeechSynthesis();
@@ -45,11 +50,37 @@ export function VoiceScreen() {
       addMessage("user", text);
       setIsSending(true);
       try {
+        // Mirror chat behavior: when a doc is active, route every voice
+        // turn to /document so the user can ask about the PDF without
+        // first switching to chat.
+        if (activeDoc) {
+          const docResp = await askDocument({
+            doc_id: activeDoc.doc_id,
+            question: text,
+          });
+          const docReply = docResp.ok
+            ? docResp.data.answer
+            : docResp.error.user_message;
+          addMessage("assistant", docReply);
+          synth.speak(docReply);
+          return;
+        }
         const result = await sendChat(text);
         const reply = result.ok
           ? pickVoiceReply(result)
           : result.error.user_message;
-        addMessage("assistant", reply);
+        // Step 6.1: voice surface speaks the short summary, but chat
+        // history keeps the rich payload so a later /chat switch shows
+        // the actual MailCard rather than just the spoken sentence.
+        const payload =
+          result.ok && RICH_UI_TYPES.has(result.ui_type)
+            ? {
+                ui_type: result.ui_type,
+                data: result.data,
+                meta: result.meta ?? undefined,
+              }
+            : undefined;
+        addMessage("assistant", reply, payload);
         synth.speak(reply);
       } catch (err) {
         const message =
@@ -62,7 +93,7 @@ export function VoiceScreen() {
         setIsSending(false);
       }
     },
-    [addMessage, isSending, synth],
+    [activeDoc, addMessage, isSending, synth],
   );
 
   const handleError = useCallback(

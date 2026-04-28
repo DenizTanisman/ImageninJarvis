@@ -44,11 +44,23 @@ Takvim için payload:
   Action "list":   {{"action": "list", "days": tamsayı (varsayılan 7)}}
   Action "create": {{"action": "create", "summary": "...", "start": ISO8601,
                     "end": ISO8601, "description": ""}}
+  Action "delete": {{"action": "delete", "query": "etkinlik başlığı"}}
   - "create" için ISO 8601 tam zaman damgası kullan (örn.
     "2026-04-27T14:00:00+03:00"). Süre belirtilmemişse end = start + 1 saat.
   - Sadece tarih verilmişse 09:00 - 10:00 varsay (saat soruyorsan fallback).
-  - update veya delete intent'leri için her zaman "fallback" döndür — bu
-    işler ekrandaki etkinlik listesinden yapılıyor.
+  - "delete" için sadece etkinliğin adını "query" olarak ver — backend
+    yaklaşan etkinlikleri tarayıp eşleşmeyi bulur ve kullanıcıya onay
+    kartı gösterir. Sessiz silme YOK.
+  - "delete" query'sinde "etkinlik", "etkinliği", "etkinliğini",
+    "toplantı", "toplantıyı", "toplantısını", "randevu" gibi GENEL
+    takvim isimlerini ÇIKART; bunlar etkinliğin adı değil, kullanıcının
+    "şu takvim öğesi" demek için kullandığı kelimeler. Örnekler:
+      "Deneme etkinliğini sil"  → query="Deneme"
+      "Q2 review toplantısını iptal et" → query="Q2 review"
+      "yarınki randevuyu sil"   → query="yarınki" (tarihi backend çözer
+                                  — sadece adı/sıfatı yaz).
+  - update intent'leri için her zaman "fallback" döndür — düzenleme
+    ekrandaki etkinlik kartı üzerinden yapılıyor.
 
 Mail için payload:
   {{"range_kind": "daily" | "weekly"}}
@@ -95,8 +107,17 @@ Cevap: {{"type":"mail","payload":{{"range_kind":"weekly"}}}}
 Mesaj: "merhaba nasılsın"
 Cevap: {{"type":"fallback","payload":{{}}}}
 
-Mesaj: "toplantıyı sil"
-Cevap: {{"type":"fallback","payload":{{}}}}
+Mesaj: "DENEME etkinliğini sil"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"DENEME"}}}}
+
+Mesaj: "Deneme etkinliğini sil"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"Deneme"}}}}
+
+Mesaj: "Q2 review toplantısını iptal et"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"Q2 review"}}}}
+
+Mesaj: "Pazartesi sunumunu sil"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"Pazartesi sunumu"}}}}
 
 Mesaj: "çeviri yapar mısın"
 Cevap: {{"type":"fallback","payload":{{}}}}

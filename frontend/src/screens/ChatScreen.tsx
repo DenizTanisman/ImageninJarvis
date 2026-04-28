@@ -1,15 +1,16 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { ChatNetworkError, sendChat } from "@/api/client";
+import { askDocument, ChatNetworkError, sendChat } from "@/api/client";
 import { BotAvatar } from "@/components/BotAvatar";
 import { CapabilityModal } from "@/components/capability/CapabilityModal";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageBubble } from "@/components/MessageBubble";
 import { ShortcutBar, type CapabilityKey } from "@/components/ShortcutBar";
 import { useConversation } from "@/store/conversation";
+import { useDocumentContext } from "@/store/document";
 
 const STEP_TOAST: Partial<Record<CapabilityKey, string>> = {
   calendar: "Takvim Step 4'te gelecek.",
@@ -26,6 +27,8 @@ export function ChatScreen() {
   );
   const [isSending, setIsSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const activeDoc = useDocumentContext((s) => s.activeDoc);
+  const clearActiveDoc = useDocumentContext((s) => s.clearActiveDoc);
 
   useEffect(() => {
     const el = listRef.current;
@@ -38,9 +41,35 @@ export function ChatScreen() {
     addMessage("user", text);
     setIsSending(true);
     try {
+      // When a document is active, every chat turn is a Q&A against
+      // that doc — bypass the classifier so questions like "bu pdf ne
+      // hakkında" route to DocumentStrategy with the doc_id the user
+      // already uploaded. They dismiss via the banner to leave doc mode.
+      if (activeDoc) {
+        const response = await askDocument({
+          doc_id: activeDoc.doc_id,
+          question: text,
+        });
+        if (response.ok) {
+          addMessage("assistant", response.data.answer);
+        } else {
+          addMessage("assistant", response.error.user_message);
+          toast.error(response.error.user_message, { duration: 3000 });
+        }
+        return;
+      }
+
       const result = await sendChat(text);
       if (result.ok) {
-        addMessage("assistant", formatChatReply(result.ui_type, result.data));
+        const replyText = formatChatReply(result.ui_type, result.data, result.meta);
+        const payload = isRichUiType(result.ui_type)
+          ? {
+              ui_type: result.ui_type,
+              data: result.data,
+              meta: result.meta ?? undefined,
+            }
+          : undefined;
+        addMessage("assistant", replyText, payload);
       } else {
         addMessage("assistant", result.error.user_message);
         toast.error(result.error.user_message, { duration: 3000 });
@@ -111,6 +140,35 @@ export function ChatScreen() {
         )}
       </section>
 
+      {activeDoc && (
+        <div
+          data-testid="active-doc-banner"
+          className="flex items-center gap-2 border-t border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-100"
+        >
+          <FileText className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">
+            <span className="font-semibold">{activeDoc.original_name}</span>
+            <span className="ml-2 text-emerald-200/70">
+              · sorularını bu belgeye göre cevaplıyorum
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              clearActiveDoc();
+              toast.info("Belge bağlamı kapatıldı — genel sohbete döndün.", {
+                duration: 2000,
+              });
+            }}
+            data-testid="clear-active-doc"
+            aria-label="Belge bağlamını kapat"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-emerald-200 transition hover:bg-emerald-500/20"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       <ChatInput
         onSend={handleSend}
         onVoicePress={handleVoicePress}
@@ -125,12 +183,29 @@ export function ChatScreen() {
   );
 }
 
-function formatChatReply(uiType: string, data: unknown): string {
+const RICH_UI_TYPES = new Set(["MailCard", "CalendarEvent", "EventList"]);
+
+function isRichUiType(uiType: string): boolean {
+  return RICH_UI_TYPES.has(uiType);
+}
+
+function formatChatReply(
+  uiType: string,
+  data: unknown,
+  meta: Record<string, unknown> | null | undefined,
+): string {
+  // Backend attaches a Turkish summary to meta.voice_summary for every
+  // capability Result; chat reuses it as the human-readable headline so
+  // the bubble never falls back to a JSON dump.
+  const voiceSummary = meta?.voice_summary;
+  if (typeof voiceSummary === "string" && voiceSummary.trim()) {
+    return voiceSummary;
+  }
   if (uiType === "TranslationCard" && isTranslationData(data)) {
     return `**${data.target_lang.toUpperCase()}**: ${data.translated_text}`;
   }
   if (typeof data === "string") return data;
-  return JSON.stringify(data);
+  return "İşlem tamamlandı.";
 }
 
 function isTranslationData(

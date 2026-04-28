@@ -32,6 +32,50 @@ logger = logging.getLogger(__name__)
 
 VALID_ACTIONS: tuple[str, ...] = ("list", "create", "update", "delete")
 
+# Generic Turkish/English nouns the user uses to refer to calendar items
+# in general ("X etkinliğini sil", "X meeting'ini iptal et"). The LLM
+# strips inflectional case markers ("...ni" / "...yi") but often leaves
+# the head noun attached, so we trim it here before substring matching.
+_GENERIC_CALENDAR_NOUNS: frozenset[str] = frozenset(
+    {
+        "etkinlik",
+        "etkinliği",
+        "etkinliğini",
+        "etkinliğin",
+        "etkinlikler",
+        "etkinlikleri",
+        "etkinliklerini",
+        "toplantı",
+        "toplantıyı",
+        "toplantısı",
+        "toplantısını",
+        "toplantılar",
+        "toplantıları",
+        "toplantılarını",
+        "randevu",
+        "randevuyu",
+        "randevusu",
+        "randevusunu",
+        "event",
+        "events",
+        "meeting",
+        "meetings",
+        "appointment",
+        "appointments",
+    }
+)
+
+
+def _normalize_delete_query(query: str) -> str:
+    """Strip trailing generic calendar nouns the classifier sometimes leaves
+    attached to the title. Keeps at least one token so single-word titles
+    that happen to *be* generic ("etkinlik") still get a fair shot.
+    """
+    parts = query.split()
+    while len(parts) > 1 and parts[-1].casefold() in _GENERIC_CALENDAR_NOUNS:
+        parts.pop()
+    return " ".join(parts)
+
 
 class CalendarStrategy(CapabilityStrategy):
     name = "calendar"
@@ -192,18 +236,66 @@ class CalendarStrategy(CapabilityStrategy):
 
     def _delete(self, adapter: CalendarAdapter, payload: dict[str, Any]) -> Result:
         event_id = (payload.get("event_id") or "").strip()
-        if not event_id:
+        query = (payload.get("query") or "").strip()
+
+        # UI-driven path: a card already identified the event by id, the
+        # user clicked Sil + confirmed, so we delete immediately.
+        if event_id:
+            adapter.delete_event(event_id)
+            return Success(
+                data={"event_id": event_id},
+                ui_type="text",
+                meta={"action": "delete"},
+            )
+
+        # Chat-driven path: the classifier extracted the event title; we
+        # resolve to a single upcoming event and surface a confirmation
+        # card. Silent deletes from chat would violate the §4 policy that
+        # destructive actions need explicit confirmation.
+        if query:
+            return self._propose_delete_by_query(adapter, query)
+
+        return Error(
+            message="missing event_id or query",
+            user_message="Hangi etkinlik siliniyor?",
+            user_notify=True,
+            log_level="info",
+        )
+
+    def _propose_delete_by_query(
+        self, adapter: CalendarAdapter, query: str
+    ) -> Result:
+        normalized = _normalize_delete_query(query)
+        events = adapter.list_events(days=DEFAULT_DAYS_AHEAD)
+        needle = normalized.casefold()
+        matches = [e for e in events if needle in (e.summary or "").casefold()]
+        if not matches:
             return Error(
-                message="missing event_id",
-                user_message="Hangi etkinlik siliniyor?",
+                message=f"no calendar match for query={normalized!r}",
+                user_message=(
+                    f"Önümüzdeki günlerde '{normalized}' adında bir etkinlik "
+                    "bulamadım."
+                ),
                 user_notify=True,
                 log_level="info",
             )
-        adapter.delete_event(event_id)
+        if len(matches) == 1:
+            return Success(
+                data=_event_payload(matches[0]),
+                ui_type="CalendarEvent",
+                meta={"action": "delete_proposal"},
+            )
+        # Ambiguous: surface every match as a selectable list so the user
+        # can pick the right one to delete. The frontend renders this with
+        # the regular EventList card; each row already has a Sil button
+        # that goes through the standard ConfirmDeleteDialog flow.
         return Success(
-            data={"event_id": event_id},
-            ui_type="text",
-            meta={"action": "delete"},
+            data={
+                "events": [asdict(e) for e in matches],
+                "days": DEFAULT_DAYS_AHEAD,
+            },
+            ui_type="EventList",
+            meta={"action": "delete_candidates", "query": normalized},
         )
 
 

@@ -224,6 +224,64 @@ async def test_delete_rejects_missing_id() -> None:
     assert isinstance(result, Error)
 
 
+@pytest.mark.asyncio
+async def test_delete_with_query_proposes_card_on_single_match() -> None:
+    adapter = MagicMock()
+    adapter.list_events.return_value = [
+        _event(id="e1", summary="DENEME"),
+        _event(id="e2", summary="Sample sync"),
+    ]
+    strategy = _strategy(adapter)
+    result = await strategy.execute({"action": "delete", "query": "deneme"})
+    assert isinstance(result, Success)
+    assert result.ui_type == "CalendarEvent"
+    assert result.meta == {"action": "delete_proposal"}
+    assert result.data["id"] == "e1"
+    adapter.delete_event.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_with_query_returns_error_when_no_match() -> None:
+    adapter = MagicMock()
+    adapter.list_events.return_value = [_event(summary="Sample sync")]
+    strategy = _strategy(adapter)
+    result = await strategy.execute({"action": "delete", "query": "yok-böyle"})
+    assert isinstance(result, Error)
+    assert "yok-böyle" in result.user_message
+    adapter.delete_event.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_with_query_returns_candidate_list_when_ambiguous() -> None:
+    adapter = MagicMock()
+    adapter.list_events.return_value = [
+        _event(id="e1", summary="Toplantı A"),
+        _event(id="e2", summary="Toplantı B"),
+    ]
+    strategy = _strategy(adapter)
+    result = await strategy.execute({"action": "delete", "query": "Toplantı"})
+    assert isinstance(result, Success)
+    assert result.ui_type == "EventList"
+    assert result.meta == {"action": "delete_candidates", "query": "Toplantı"}
+    assert len(result.data["events"]) == 2
+    adapter.delete_event.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_query_strips_generic_calendar_nouns() -> None:
+    adapter = MagicMock()
+    adapter.list_events.return_value = [_event(id="e1", summary="Deneme")]
+    strategy = _strategy(adapter)
+    # User said "Deneme etkinliğini sil"; classifier may leak "etkinliği".
+    result = await strategy.execute(
+        {"action": "delete", "query": "Deneme etkinliği"}
+    )
+    assert isinstance(result, Success)
+    assert result.ui_type == "CalendarEvent"
+    assert result.meta == {"action": "delete_proposal"}
+    assert result.data["id"] == "e1"
+
+
 # ---------- adapter failures wrapped ----------
 
 

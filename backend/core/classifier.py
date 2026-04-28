@@ -30,7 +30,7 @@ SUPPORTED_INTENT_TYPES: tuple[IntentType, ...] = (
     "mail",
 )
 ISTANBUL = UTC  # Gemini handles tz inside the prompt; pass UTC base
-CALENDAR_VALID_ACTIONS: tuple[str, ...] = ("list", "create")
+CALENDAR_VALID_ACTIONS: tuple[str, ...] = ("list", "create", "delete")
 MAIL_VALID_RANGE_KINDS: tuple[str, ...] = ("daily", "weekly")
 
 
@@ -109,8 +109,10 @@ def _valid_translation_payload(payload: dict[str, Any]) -> bool:
 
 def _valid_calendar_payload(payload: dict[str, Any]) -> bool:
     """Calendar intents must specify a supported action and any required
-    fields for that action. update / delete are deliberately not classifier-
-    routable yet — they need event context the model can't infer reliably."""
+    fields for that action. update is still deliberately not classifier-
+    routable — it needs event context the model can't infer reliably.
+    delete via chat resolves by ``query`` (event title substring) and the
+    backend turns that into a confirmation card instead of a silent delete."""
     action = payload.get("action")
     if action not in CALENDAR_VALID_ACTIONS:
         return False
@@ -121,6 +123,9 @@ def _valid_calendar_payload(payload: dict[str, Any]) -> bool:
         return all(
             isinstance(v, str) and bool(v.strip()) for v in (summary, start, end)
         )
+    if action == "delete":
+        query = payload.get("query")
+        return isinstance(query, str) and bool(query.strip())
     return True  # list has no required fields beyond action
 
 
