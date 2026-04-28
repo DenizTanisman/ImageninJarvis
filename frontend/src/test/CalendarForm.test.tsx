@@ -17,7 +17,9 @@ vi.mock("sonner", () => ({
 }));
 
 beforeEach(() => callCalendarMock.mockReset());
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("CalendarForm", () => {
   it("disables submit until title + date + start + end are filled", async () => {
