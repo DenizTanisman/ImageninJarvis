@@ -37,7 +37,9 @@ const fakeEvents = [
 ];
 
 beforeEach(() => callCalendarMock.mockReset());
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("EventList real-data flow", () => {
   it("loads events on mount and renders them", async () => {

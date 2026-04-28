@@ -1,10 +1,18 @@
 import { create } from "zustand";
 
-import type { ChatMessage, MessageRole } from "@/components/MessageBubble";
+import type {
+  ChatMessage,
+  ChatMessagePayload,
+  MessageRole,
+} from "@/components/MessageBubble";
 
 export interface ConversationState {
   messages: ChatMessage[];
-  addMessage: (role: MessageRole, text: string) => ChatMessage;
+  addMessage: (
+    role: MessageRole,
+    text: string,
+    payload?: ChatMessagePayload,
+  ) => ChatMessage;
   clearMessages: () => void;
   resetToGreeting: () => void;
 }
@@ -21,12 +29,13 @@ const nextId = (role: MessageRole) => `${role}-${Date.now()}-${++messageCounter}
 
 export const useConversation = create<ConversationState>((set) => ({
   messages: [GREETING],
-  addMessage: (role, text) => {
+  addMessage: (role, text, payload) => {
     const message: ChatMessage = {
       id: nextId(role),
       role,
       text,
       createdAt: Date.now(),
+      ...(payload ? { payload } : {}),
     };
     set((state) => ({ messages: [...state.messages, message] }));
     return message;

@@ -25,13 +25,14 @@ Bağlam:
 
 Şema:
 {{
-  "type": "translation" | "calendar" | "fallback",
+  "type": "translation" | "calendar" | "mail" | "fallback",
   "payload": {{ ... }}   // type'a göre değişir
 }}
 
 Kurallar:
 - Yalnızca açıkça çeviri istendiğinde "translation" seç.
 - Yalnızca açıkça takvim isteği varsa "calendar" seç.
+- Mail / e-posta / inbox / gelen kutusu özetlemesi isteniyorsa "mail" seç.
 - Belirsizse "fallback".
 
 Çeviri için payload:
@@ -43,11 +44,38 @@ Takvim için payload:
   Action "list":   {{"action": "list", "days": tamsayı (varsayılan 7)}}
   Action "create": {{"action": "create", "summary": "...", "start": ISO8601,
                     "end": ISO8601, "description": ""}}
+  Action "delete": {{"action": "delete", "query": "etkinlik başlığı"}}
   - "create" için ISO 8601 tam zaman damgası kullan (örn.
     "2026-04-27T14:00:00+03:00"). Süre belirtilmemişse end = start + 1 saat.
   - Sadece tarih verilmişse 09:00 - 10:00 varsay (saat soruyorsan fallback).
-  - update veya delete intent'leri için her zaman "fallback" döndür — bu
-    işler ekrandaki etkinlik listesinden yapılıyor.
+  - "delete" için sadece etkinliğin adını "query" olarak ver — backend
+    yaklaşan etkinlikleri tarayıp eşleşmeyi bulur ve kullanıcıya onay
+    kartı gösterir. Sessiz silme YOK.
+  - "delete" query'sinde "etkinlik", "etkinliği", "etkinliğini",
+    "toplantı", "toplantıyı", "toplantısını", "randevu" gibi GENEL
+    takvim isimlerini ÇIKART; bunlar etkinliğin adı değil, kullanıcının
+    "şu takvim öğesi" demek için kullandığı kelimeler. Örnekler:
+      "Deneme etkinliğini sil"  → query="Deneme"
+      "Q2 review toplantısını iptal et" → query="Q2 review"
+      "yarınki randevuyu sil"   → query="yarınki" (tarihi backend çözer
+                                  — sadece adı/sıfatı yaz).
+  - update intent'leri için her zaman "fallback" döndür — düzenleme
+    ekrandaki etkinlik kartı üzerinden yapılıyor.
+
+Mail için payload (iki şekil):
+  Özet: {{"range_kind": "daily" | "weekly"}}
+  Compose: {{"action": "compose", "to": "alici@domain", "instruction": "..."}}
+  - "Bugünün mailleri / inbox / gelen kutusu / e-postalar" → "daily".
+  - "Bu haftaki mailler / haftalık özet" → "weekly".
+  - Belirli bir tarih aralığı (özel range) chat / voice'tan istenirse
+    "fallback" döndür — kullanıcı shortcut'tan custom range seçmeli.
+  - "X@Y'ye ... yazan / ... hakkında / ... söyleyen mail at/gönder/yaz"
+    → action="compose". "to" alanına aynen e-posta adresini yaz, başına
+    "mailto:" ekleme, başka karakter çıkarma. "instruction" kullanıcının
+    içerik talimatını içerir (örn. "merhaba yaz", "yarınki sunum
+    hakkında bilgi ver"). Tarih hesabı veya alıcı adı çıkarımı yapma.
+  - Sessiz gönderme YOK — backend taslak üretip kullanıcıya kart
+    gösteriyor. Sen sadece intent'i yakala.
 
 type "fallback" ise payload boş obje ({{}}).
 
@@ -74,11 +102,38 @@ Cevap: {{"type":"calendar","payload":{{"action":"create","summary":"Q2 review","
 Mesaj: "Cuma 10:00'da Sample Project sync ekle"
 Cevap: {{"type":"calendar","payload":{{"action":"create","summary":"Sample Project sync","start":"<gelen-cuma>T10:00:00+03:00","end":"<gelen-cuma>T11:00:00+03:00","description":""}}}}
 
+Mesaj: "bugünün maillerini özetle"
+Cevap: {{"type":"mail","payload":{{"range_kind":"daily"}}}}
+
+Mesaj: "inbox'ta ne var"
+Cevap: {{"type":"mail","payload":{{"range_kind":"daily"}}}}
+
+Mesaj: "bu haftaki maillerime bir bak"
+Cevap: {{"type":"mail","payload":{{"range_kind":"weekly"}}}}
+
+Mesaj: "ali@example.com'a merhaba yazan bir mail gönder"
+Cevap: {{"type":"mail","payload":{{"action":"compose","to":"ali@example.com","instruction":"merhaba yaz"}}}}
+
+Mesaj: "veli@firma.com.tr'ye yarınki sunum hakkında kısa bir bilgilendirme yaz"
+Cevap: {{"type":"mail","payload":{{"action":"compose","to":"veli@firma.com.tr","instruction":"yarınki sunum hakkında kısa bilgilendirme"}}}}
+
+Mesaj: "send a quick hi to sample@example.com"
+Cevap: {{"type":"mail","payload":{{"action":"compose","to":"sample@example.com","instruction":"send a quick hi"}}}}
+
 Mesaj: "merhaba nasılsın"
 Cevap: {{"type":"fallback","payload":{{}}}}
 
-Mesaj: "toplantıyı sil"
-Cevap: {{"type":"fallback","payload":{{}}}}
+Mesaj: "DENEME etkinliğini sil"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"DENEME"}}}}
+
+Mesaj: "Deneme etkinliğini sil"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"Deneme"}}}}
+
+Mesaj: "Q2 review toplantısını iptal et"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"Q2 review"}}}}
+
+Mesaj: "Pazartesi sunumunu sil"
+Cevap: {{"type":"calendar","payload":{{"action":"delete","query":"Pazartesi sunumu"}}}}
 
 Mesaj: "çeviri yapar mısın"
 Cevap: {{"type":"fallback","payload":{{}}}}

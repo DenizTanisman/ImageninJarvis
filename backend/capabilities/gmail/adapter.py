@@ -110,6 +110,38 @@ class GmailAdapter:
         except (HttpError, OSError) as exc:
             raise GmailAdapterError(f"Gmail get failed: {exc}") from exc
 
+    def send_new(
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+    ) -> dict[str, Any]:
+        """Send a brand-new email — no thread, no ``Re:`` prefix.
+
+        Used by the chat-driven compose flow ("X'e mail at"). Caller is
+        expected to pre-validate the recipient and to surface the draft
+        to the user before invoking; nothing here gates against missing
+        confirmation.
+        """
+        if not to or not body.strip():
+            raise GmailAdapterError("send_new requires a recipient and body")
+        message = EmailMessage()
+        message["To"] = to
+        message["Subject"] = subject or "(konusuz)"
+        message.set_content(body)
+
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+        try:
+            return (
+                self._service.users()
+                .messages()
+                .send(userId="me", body={"raw": raw})
+                .execute(num_retries=EXECUTE_NUM_RETRIES)
+            )
+        except (HttpError, OSError) as exc:
+            raise GmailAdapterError(f"Gmail send failed: {exc}") from exc
+
     def send_reply(
         self,
         *,

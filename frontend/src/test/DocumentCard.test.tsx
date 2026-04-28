@@ -43,7 +43,9 @@ beforeEach(() => {
   askDocumentMock.mockReset();
 });
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 const fakeDoc = {
   doc_id: "doc-1",

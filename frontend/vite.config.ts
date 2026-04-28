@@ -17,5 +17,9 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // Vitest's default include picks up tests/e2e/*.spec.ts too — but
+    // those are Playwright specs that depend on @playwright/test (not
+    // jsdom) and would crash here. Pin the include glob to src/.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
 });

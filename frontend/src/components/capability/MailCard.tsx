@@ -28,6 +28,14 @@ const ORDER: MailCategoryKey[] = ["important", "dm", "promo", "other"];
 
 interface MailCardProps {
   onReplyClick?: () => void;
+  /** When provided, MailCard skips the mail fetch and renders this data
+   * directly. Used by the chat surface to render an inline summary that
+   * was returned from the dispatcher rather than fetched on-demand. */
+  initialData?: MailSummaryData;
+  /** Hide the daily/weekly/custom range buttons. The chat-rendered
+   * inline view shows a snapshot tied to the user's question, so letting
+   * them switch ranges would be misleading. */
+  hideRangeSelector?: boolean;
 }
 
 function MailRow({ entry }: { entry: MailEntry }) {
@@ -63,17 +71,23 @@ type LoadState =
 
 type ViewMode = "list" | "reply";
 
-export function MailCard({ onReplyClick }: MailCardProps) {
+export function MailCard({
+  onReplyClick,
+  initialData,
+  hideRangeSelector,
+}: MailCardProps) {
   const range = useMailUI((s) => s.range);
   const [state, setState] = useState<LoadState>({ kind: "idle" });
   const [view, setView] = useState<ViewMode>("list");
 
   // Re-fetch whenever the range changes (kind switch or custom date edit).
+  // When `initialData` is supplied, skip the fetch and only resolve auth
+  // status (needed to enable the batch-reply path).
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
 
-    async function load() {
+    async function loadFromBackend() {
       setState({ kind: "loading" });
       setView("list");
       try {
@@ -107,12 +121,37 @@ export function MailCard({ onReplyClick }: MailCardProps) {
       }
     }
 
-    void load();
+    async function loadAuthOnly(data: MailSummaryData) {
+      setState({ kind: "loading" });
+      setView("list");
+      try {
+        const status = await getAuthStatus(controller.signal);
+        if (cancelled) return;
+        setState({ kind: "ready", data, authStatus: status, cached: false });
+      } catch {
+        if (cancelled) return;
+        // Auth probe failure shouldn't hide the summary the user already
+        // has — fall back to a disconnected stub so the categories still
+        // render. Batch-reply UI will surface the auth issue if pressed.
+        setState({
+          kind: "ready",
+          data,
+          authStatus: { connected: false, scopes: [], can_send: false },
+          cached: false,
+        });
+      }
+    }
+
+    if (initialData) {
+      void loadAuthOnly(initialData);
+    } else {
+      void loadFromBackend();
+    }
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [range]);
+  }, [range, initialData]);
 
   const handleReplyClick = () => {
     onReplyClick?.();
@@ -121,7 +160,7 @@ export function MailCard({ onReplyClick }: MailCardProps) {
 
   return (
     <div data-testid="mail-card" className="space-y-4">
-      {view === "list" && <MailRangeSelector />}
+      {view === "list" && !hideRangeSelector && <MailRangeSelector />}
       <Body
         state={state}
         view={view}

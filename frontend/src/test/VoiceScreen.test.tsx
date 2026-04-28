@@ -186,4 +186,55 @@ describe("VoiceScreen", () => {
     expect(ttsState.cancel).toHaveBeenCalled();
     expect(screen.getByTestId("current-path")).toHaveTextContent("/chat");
   });
+
+  it("uses voice_summary from meta when present instead of structured data", async () => {
+    sendChatMock.mockResolvedValueOnce({
+      ok: true,
+      ui_type: "MailCard",
+      data: { categories: { important: [], dm: [], promo: [], other: [] } },
+      meta: { voice_summary: "4 önemli, 2 promo mail var." },
+    });
+    renderAt();
+    await act(async () => {
+      sttState.onFinal!("bugün ne var");
+    });
+    await waitFor(() =>
+      expect(ttsState.speak).toHaveBeenCalledWith("4 önemli, 2 promo mail var."),
+    );
+    const last = useConversation
+      .getState()
+      .messages.slice(-1)[0];
+    expect(last.text).toBe("4 önemli, 2 promo mail var.");
+  });
+
+  it("falls back to data string when voice_summary is missing", async () => {
+    sendChatMock.mockResolvedValueOnce({
+      ok: true,
+      ui_type: "text",
+      data: "Selam!",
+    });
+    renderAt();
+    await act(async () => {
+      sttState.onFinal!("merhaba");
+    });
+    await waitFor(() => expect(ttsState.speak).toHaveBeenCalledWith("Selam!"));
+  });
+
+  it("barge-in: cancels TTS the moment user starts speaking", () => {
+    ttsState.isSpeaking = true;
+    sttState.interimTranscript = "ya";
+    renderAt();
+    expect(ttsState.cancel).toHaveBeenCalled();
+  });
+
+  it("no-speech error speaks the prompt back so the conversation loops", async () => {
+    renderAt();
+    expect(sttState.onError).toBeDefined();
+    await act(async () => {
+      sttState.onError!("no-speech");
+    });
+    expect(ttsState.speak).toHaveBeenCalledWith(
+      expect.stringMatching(/duyamadım/i),
+    );
+  });
 });

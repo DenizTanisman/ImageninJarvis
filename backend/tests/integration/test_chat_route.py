@@ -50,7 +50,10 @@ def test_post_chat_returns_success_payload(client: TestClient) -> None:
     assert body["ok"] is True
     assert body["ui_type"] == "text"
     assert body["data"] == "merhaba!"
-    assert body["meta"] == {"source": "fallback"}
+    # voice_summary is appended to meta so the voice surface can pipe it
+    # straight to TTS without inspecting structured payloads.
+    assert body["meta"]["source"] == "fallback"
+    assert body["meta"]["voice_summary"] == "merhaba!"
     assert body["error"] is None
 
 

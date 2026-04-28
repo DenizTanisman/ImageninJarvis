@@ -27,9 +27,12 @@ SUPPORTED_INTENT_TYPES: tuple[IntentType, ...] = (
     "fallback",
     "translation",
     "calendar",
+    "mail",
 )
 ISTANBUL = UTC  # Gemini handles tz inside the prompt; pass UTC base
-CALENDAR_VALID_ACTIONS: tuple[str, ...] = ("list", "create")
+CALENDAR_VALID_ACTIONS: tuple[str, ...] = ("list", "create", "delete")
+MAIL_VALID_RANGE_KINDS: tuple[str, ...] = ("daily", "weekly")
+MAIL_VALID_ACTIONS: tuple[str, ...] = ("compose",)
 
 
 @dataclass(frozen=True)
@@ -92,6 +95,10 @@ def _coerce_intent(raw: object, cleaned_text: str) -> Intent:
         logger.info("Calendar intent missing required payload, falling back.")
         return Intent(type="fallback", text=cleaned_text, payload={})
 
+    if intent_type == "mail" and not _valid_mail_payload(payload):
+        logger.info("Mail intent missing required payload, falling back.")
+        return Intent(type="fallback", text=cleaned_text, payload={})
+
     return Intent(type=intent_type, text=cleaned_text, payload=payload)  # type: ignore[arg-type]
 
 
@@ -103,8 +110,10 @@ def _valid_translation_payload(payload: dict[str, Any]) -> bool:
 
 def _valid_calendar_payload(payload: dict[str, Any]) -> bool:
     """Calendar intents must specify a supported action and any required
-    fields for that action. update / delete are deliberately not classifier-
-    routable yet — they need event context the model can't infer reliably."""
+    fields for that action. update is still deliberately not classifier-
+    routable — it needs event context the model can't infer reliably.
+    delete via chat resolves by ``query`` (event title substring) and the
+    backend turns that into a confirmation card instead of a silent delete."""
     action = payload.get("action")
     if action not in CALENDAR_VALID_ACTIONS:
         return False
@@ -115,4 +124,34 @@ def _valid_calendar_payload(payload: dict[str, Any]) -> bool:
         return all(
             isinstance(v, str) and bool(v.strip()) for v in (summary, start, end)
         )
+    if action == "delete":
+        query = payload.get("query")
+        return isinstance(query, str) and bool(query.strip())
     return True  # list has no required fields beyond action
+
+
+def _valid_mail_payload(payload: dict[str, Any]) -> bool:
+    """Mail intents come in two shapes:
+
+    - Summary: ``{"range_kind": "daily" | "weekly"}``
+    - Compose: ``{"action": "compose", "to": "...@...", "instruction": "..."}``
+
+    Dates are computed by MailStrategy from today, so the classifier
+    never needs to produce them. Compose validates a non-empty
+    recipient that *looks like* an address (cheap "@" check — the
+    strategy does the strict validation) and a non-empty instruction.
+    """
+    action = payload.get("action")
+    if action in MAIL_VALID_ACTIONS:
+        if action == "compose":
+            to = payload.get("to")
+            instruction = payload.get("instruction")
+            return (
+                isinstance(to, str)
+                and "@" in to
+                and bool(to.strip())
+                and isinstance(instruction, str)
+                and bool(instruction.strip())
+            )
+        return False
+    return payload.get("range_kind") in MAIL_VALID_RANGE_KINDS

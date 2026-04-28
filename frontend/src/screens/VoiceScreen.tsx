@@ -10,12 +10,25 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { ChatNetworkError, sendChat } from "@/api/client";
+import {
+  askDocument,
+  ChatNetworkError,
+  sendChat,
+  type ChatSuccessResponse,
+} from "@/api/client";
 import { BotAvatar } from "@/components/BotAvatar";
 import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { useConversation } from "@/store/conversation";
+import { useDocumentContext } from "@/store/document";
+
+const RICH_UI_TYPES = new Set([
+  "MailCard",
+  "CalendarEvent",
+  "EventList",
+  "MailDraftCard",
+]);
 
 const ERROR_MESSAGES: Record<string, string> = {
   "not-allowed": "Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.",
@@ -31,6 +44,7 @@ export function VoiceScreen() {
   const navigate = useNavigate();
   const messageCount = useConversation((s) => s.messages.length);
   const addMessage = useConversation((s) => s.addMessage);
+  const activeDoc = useDocumentContext((s) => s.activeDoc);
 
   const [isSending, setIsSending] = useState(false);
   const synth = useSpeechSynthesis();
@@ -41,13 +55,37 @@ export function VoiceScreen() {
       addMessage("user", text);
       setIsSending(true);
       try {
+        // Mirror chat behavior: when a doc is active, route every voice
+        // turn to /document so the user can ask about the PDF without
+        // first switching to chat.
+        if (activeDoc) {
+          const docResp = await askDocument({
+            doc_id: activeDoc.doc_id,
+            question: text,
+          });
+          const docReply = docResp.ok
+            ? docResp.data.answer
+            : docResp.error.user_message;
+          addMessage("assistant", docReply);
+          synth.speak(docReply);
+          return;
+        }
         const result = await sendChat(text);
         const reply = result.ok
-          ? typeof result.data === "string"
-            ? result.data
-            : JSON.stringify(result.data)
+          ? pickVoiceReply(result)
           : result.error.user_message;
-        addMessage("assistant", reply);
+        // Step 6.1: voice surface speaks the short summary, but chat
+        // history keeps the rich payload so a later /chat switch shows
+        // the actual MailCard rather than just the spoken sentence.
+        const payload =
+          result.ok && RICH_UI_TYPES.has(result.ui_type)
+            ? {
+                ui_type: result.ui_type,
+                data: result.data,
+                meta: result.meta ?? undefined,
+              }
+            : undefined;
+        addMessage("assistant", reply, payload);
         synth.speak(reply);
       } catch (err) {
         const message =
@@ -60,17 +98,23 @@ export function VoiceScreen() {
         setIsSending(false);
       }
     },
-    [addMessage, isSending, synth],
+    [activeDoc, addMessage, isSending, synth],
   );
 
-  const handleError = useCallback((code: string) => {
-    const msg = ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unknown;
-    if (code === "no-speech") {
-      toast.info(msg, { duration: 2500 });
-    } else {
-      toast.error(msg, { duration: 3500 });
-    }
-  }, []);
+  const handleError = useCallback(
+    (code: string) => {
+      const msg = ERROR_MESSAGES[code] ?? ERROR_MESSAGES.unknown;
+      if (code === "no-speech") {
+        toast.info(msg, { duration: 2500 });
+        // Spec §6.3: nudge the user via TTS so the conversational loop
+        // stays mode-agnostic instead of silently failing.
+        synth.speak(msg);
+      } else {
+        toast.error(msg, { duration: 3500 });
+      }
+    },
+    [synth],
+  );
 
   const recognition = useSpeechRecognition({
     onFinal: handleFinal,
@@ -83,6 +127,15 @@ export function VoiceScreen() {
     recognition.start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recognition.isSupported]);
+
+  // Spec §6.3: barge-in — once the user starts talking (first interim
+  // transcript token), cut the assistant's TTS so the user doesn't have
+  // to wait for it to finish.
+  useEffect(() => {
+    if (recognition.interimTranscript && synth.isSpeaking) {
+      synth.cancel();
+    }
+  }, [recognition.interimTranscript, synth]);
 
   const toggleMic = () => {
     if (recognition.isListening) {
@@ -212,4 +265,15 @@ export function VoiceScreen() {
       </button>
     </main>
   );
+}
+
+function pickVoiceReply(result: ChatSuccessResponse): string {
+  const summary = result.meta?.voice_summary;
+  if (typeof summary === "string" && summary.trim()) {
+    return summary;
+  }
+  if (typeof result.data === "string") {
+    return result.data;
+  }
+  return "İşlem tamamlandı.";
 }

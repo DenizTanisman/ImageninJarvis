@@ -176,6 +176,95 @@ async def test_classifier_falls_back_on_unsupported_calendar_action() -> None:
     assert intent.type == "fallback"
 
 
+# ---------- mail ----------
+
+
+@pytest.mark.asyncio
+async def test_classifier_detects_mail_daily_intent() -> None:
+    raw = {"type": "mail", "payload": {"range_kind": "daily"}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("bugünün maillerini özetle")
+    assert intent.type == "mail"
+    assert intent.payload["range_kind"] == "daily"
+
+
+@pytest.mark.asyncio
+async def test_classifier_detects_mail_weekly_intent() -> None:
+    raw = {"type": "mail", "payload": {"range_kind": "weekly"}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("bu haftaki maillerime bak")
+    assert intent.type == "mail"
+    assert intent.payload["range_kind"] == "weekly"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_mail_range_kind_unsupported() -> None:
+    """Custom range from chat / voice should bounce — the user has to
+    pick custom dates from the shortcut UI."""
+    raw = {"type": "mail", "payload": {"range_kind": "custom"}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("4 nisan ile 5 nisan arası mailler")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_mail_payload_missing_range() -> None:
+    raw = {"type": "mail", "payload": {}}
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("mail")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_classifier_detects_mail_compose_intent() -> None:
+    raw = {
+        "type": "mail",
+        "payload": {
+            "action": "compose",
+            "to": "ali@example.com",
+            "instruction": "merhaba yaz",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify(
+        "ali@example.com'a merhaba yazan bir mail gönder"
+    )
+    assert intent.type == "mail"
+    assert intent.payload["action"] == "compose"
+    assert intent.payload["to"] == "ali@example.com"
+    assert intent.payload["instruction"] == "merhaba yaz"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_compose_recipient_missing_at() -> None:
+    raw = {
+        "type": "mail",
+        "payload": {
+            "action": "compose",
+            "to": "not-an-email",
+            "instruction": "merhaba",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("not-an-email'e merhaba yaz")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_compose_instruction_empty() -> None:
+    raw = {
+        "type": "mail",
+        "payload": {
+            "action": "compose",
+            "to": "ali@example.com",
+            "instruction": "",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("ali@example.com")
+    assert intent.type == "fallback"
+
+
 @pytest.mark.asyncio
 async def test_classifier_includes_now_in_system_prompt() -> None:
     """The model needs the current timestamp to resolve "yarın", "Cuma", etc.

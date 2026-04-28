@@ -14,6 +14,14 @@ interface EventListProps {
   /** Bumping this number forces a reload — the parent uses it after a
    * successful create / update / delete to refresh the list. */
   reloadKey?: number;
+  /** When supplied, EventList skips the initial fetch and renders these
+   * events directly. Used by chat-rendered candidate lists (e.g. when
+   * "X'i sil" matches multiple events). After a delete/update, the
+   * component still calls the API and reflects the changes locally. */
+  initialEvents?: CalendarEventDTO[];
+  /** Headline shown above the list — typically "X için adaylar" when
+   * rendering ambiguous delete candidates inline. */
+  headline?: string;
 }
 
 type Status =
@@ -22,14 +30,29 @@ type Status =
   | { kind: "error"; message: string }
   | { kind: "needs-auth"; message: string };
 
-export function EventList({ reloadKey = 0 }: EventListProps) {
-  const [status, setStatus] = useState<Status>({ kind: "loading" });
+export function EventList({
+  reloadKey = 0,
+  initialEvents,
+  headline,
+}: EventListProps) {
+  const [status, setStatus] = useState<Status>(() =>
+    initialEvents
+      ? { kind: "ready", events: initialEvents }
+      : { kind: "loading" },
+  );
   const [editing, setEditing] = useState<CalendarEventDTO | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CalendarEventDTO | null>(
     null,
   );
 
   useEffect(() => {
+    if (initialEvents) {
+      // Inline render path: trust the data we were handed. After a
+      // delete / update inside this card, the user can still refresh
+      // via the standard UI; we don't auto-fetch a fuller list.
+      setStatus({ kind: "ready", events: initialEvents });
+      return;
+    }
     let cancelled = false;
     const controller = new AbortController();
     setStatus({ kind: "loading" });
@@ -62,7 +85,7 @@ export function EventList({ reloadKey = 0 }: EventListProps) {
       cancelled = true;
       controller.abort();
     };
-  }, [reloadKey]);
+  }, [reloadKey, initialEvents]);
 
   const refresh = () => {
     setStatus({ kind: "loading" });
@@ -77,6 +100,23 @@ export function EventList({ reloadKey = 0 }: EventListProps) {
       });
   };
 
+  const removeLocal = (id: string) =>
+    setStatus((prev) =>
+      prev.kind === "ready"
+        ? { kind: "ready", events: prev.events.filter((e) => e.id !== id) }
+        : prev,
+    );
+
+  const replaceLocal = (updated: CalendarEventDTO) =>
+    setStatus((prev) =>
+      prev.kind === "ready"
+        ? {
+            kind: "ready",
+            events: prev.events.map((e) => (e.id === updated.id ? updated : e)),
+          }
+        : prev,
+    );
+
   const handleDelete = async (event: CalendarEventDTO) => {
     setConfirmDelete(null);
     try {
@@ -86,7 +126,14 @@ export function EventList({ reloadKey = 0 }: EventListProps) {
       });
       if (response.ok) {
         toast.success(`"${event.summary}" silindi.`, { duration: 2500 });
-        refresh();
+        // Inline (chat-rendered) mode: keep the curated list, just drop
+        // the deleted row. Standalone mode: refetch so any server-side
+        // changes since mount surface too.
+        if (initialEvents) {
+          removeLocal(event.id);
+        } else {
+          refresh();
+        }
       } else {
         toast.error(response.error.user_message, { duration: 3000 });
       }
@@ -144,13 +191,21 @@ export function EventList({ reloadKey = 0 }: EventListProps) {
   if (status.events.length === 0) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
-        Önümüzdeki 7 günde etkinlik yok.
+        {initialEvents ? "Liste boşaldı." : "Önümüzdeki 7 günde etkinlik yok."}
       </div>
     );
   }
 
   return (
     <>
+      {headline && (
+        <p
+          data-testid="event-list-headline"
+          className="mb-2 text-xs text-slate-400"
+        >
+          {headline}
+        </p>
+      )}
       <ul data-testid="event-list" className="space-y-2">
         {status.events.map((event) => (
           <li
@@ -206,9 +261,13 @@ export function EventList({ reloadKey = 0 }: EventListProps) {
         <EditDialog
           event={editing}
           onClose={() => setEditing(null)}
-          onSaved={() => {
+          onSaved={(updated) => {
             setEditing(null);
-            refresh();
+            if (initialEvents && updated) {
+              replaceLocal(updated);
+            } else {
+              refresh();
+            }
           }}
         />
       )}
@@ -223,13 +282,13 @@ export function EventList({ reloadKey = 0 }: EventListProps) {
   );
 }
 
-interface EditDialogProps {
+export interface EditDialogProps {
   event: CalendarEventDTO;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (updated?: CalendarEventDTO) => void;
 }
 
-function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
+export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
   const [summary, setSummary] = useState(event.summary);
   const [description, setDescription] = useState(event.description);
   const [saving, setSaving] = useState(false);
@@ -251,7 +310,9 @@ function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
       });
       if (response.ok) {
         toast.success("Etkinlik güncellendi.", { duration: 2500 });
-        onSaved();
+        onSaved(
+          response.ui_type === "CalendarEvent" ? response.data : undefined,
+        );
       } else {
         setError(response.error.user_message);
       }
@@ -318,13 +379,13 @@ function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
   );
 }
 
-interface ConfirmDeleteDialogProps {
+export interface ConfirmDeleteDialogProps {
   event: CalendarEventDTO;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
-function ConfirmDeleteDialog({
+export function ConfirmDeleteDialog({
   event,
   onCancel,
   onConfirm,

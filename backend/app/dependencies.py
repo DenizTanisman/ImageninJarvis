@@ -32,12 +32,13 @@ from services.token_store import TokenStore
 @lru_cache(maxsize=1)
 def _build_default_dispatcher() -> Dispatcher:
     gemini = _build_gemini_client()
-    # Eagerly register strategies that the dispatcher (chat / voice path)
-    # needs to discover via the classifier. Mail still ships its own
-    # registration through get_mail_strategy because the /mail/summary
-    # route bypasses the classifier and constructs it directly.
+    # Eagerly register strategies the dispatcher needs to discover via
+    # the classifier. Step 6.1: mail joins the eager set so voice / chat
+    # can route "bugünün maillerini özetle" without first hitting the
+    # /mail/summary shortcut.
     _ensure_registered(TranslationStrategy(gemini))
     _ensure_registered(_build_calendar_strategy())
+    _ensure_registered(_build_mail_strategy())
     return Dispatcher(
         classifier=Classifier(gemini),
         registry=default_registry,
@@ -164,6 +165,7 @@ def _build_mail_strategy() -> MailStrategy:
         oauth=_build_oauth_service(),
         classifier=EmailClassifier(_build_gemini_client()),
         cache=_build_email_cache(),
+        draft_generator=_build_draft_generator(),
     )
 
 

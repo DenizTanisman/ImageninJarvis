@@ -61,12 +61,13 @@ def _adapter_returning(mails: list[MailSummary]) -> MagicMock:
     return adapter
 
 
-def _strategy(*, oauth, classifier, cache, adapter) -> MailStrategy:
+def _strategy(*, oauth, classifier, cache, adapter, now_factory=None) -> MailStrategy:
     return MailStrategy(
         oauth=oauth,
         classifier=classifier,
         cache=cache,
         adapter_factory=lambda creds: adapter,
+        now_factory=now_factory,
     )
 
 
@@ -87,7 +88,11 @@ async def test_returns_error_when_user_not_connected(cache: EmailCache) -> None:
 
 
 @pytest.mark.asyncio
-async def test_returns_error_when_range_missing(cache: EmailCache) -> None:
+async def test_returns_error_when_range_kind_unknown(cache: EmailCache) -> None:
+    """Custom range without explicit dates can't be auto-resolved — the
+    /mail/summary shortcut always sends explicit dates, but the chat /
+    voice path goes through the classifier which only ships
+    daily / weekly. Anything else falls into the "missing bounds" error."""
     oauth = _oauth_with_credentials(MagicMock())
     strategy = _strategy(
         oauth=oauth,
@@ -95,8 +100,56 @@ async def test_returns_error_when_range_missing(cache: EmailCache) -> None:
         cache=cache,
         adapter=_adapter_returning([]),
     )
-    result = await strategy.execute({"range_kind": "daily"})
+    result = await strategy.execute({"range_kind": "custom"})
     assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_resolves_daily_range_from_today_when_dates_omitted(
+    cache: EmailCache,
+) -> None:
+    """Voice / chat intents only ship range_kind; the strategy must
+    compute YYYY-MM-DD bounds itself."""
+    import datetime as _dt
+
+    frozen = _dt.date(2026, 4, 27)
+    adapter = _adapter_returning([])
+    strategy = _strategy(
+        oauth=_oauth_with_credentials(MagicMock()),
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter=adapter,
+        now_factory=lambda: frozen,
+    )
+    result = await strategy.execute({"range_kind": "daily"})
+    assert isinstance(result, Success)
+    adapter_inst = strategy._adapter_factory(MagicMock())
+    # Adapter was called with today=2026-04-27, before=2026-04-28
+    adapter_inst.list_messages.assert_called()
+    kwargs = adapter_inst.list_messages.call_args.kwargs
+    assert kwargs["after"] == "2026-04-27"
+    assert kwargs["before"] == "2026-04-28"
+
+
+@pytest.mark.asyncio
+async def test_resolves_weekly_range_to_last_seven_days(cache: EmailCache) -> None:
+    import datetime as _dt
+
+    frozen = _dt.date(2026, 4, 27)
+    adapter = _adapter_returning([])
+    strategy = _strategy(
+        oauth=_oauth_with_credentials(MagicMock()),
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter=adapter,
+        now_factory=lambda: frozen,
+    )
+    result = await strategy.execute({"range_kind": "weekly"})
+    assert isinstance(result, Success)
+    adapter_inst = strategy._adapter_factory(MagicMock())
+    kwargs = adapter_inst.list_messages.call_args.kwargs
+    assert kwargs["after"] == "2026-04-21"
+    assert kwargs["before"] == "2026-04-28"
 
 
 @pytest.mark.asyncio
@@ -186,3 +239,122 @@ async def test_adapter_failure_surfaces_friendly_error(cache: EmailCache) -> Non
         {"range_kind": "daily", "after": "2026-04-24", "before": "2026-04-25"}
     )
     assert isinstance(result, Error)
+
+
+# ---------- compose ----------
+
+
+def _draft_generator_returning(subject: str, body: str) -> MagicMock:
+    from capabilities.gmail.draft import ComposeDraft, DraftGenerator
+
+    fake = MagicMock(spec=DraftGenerator)
+
+    async def _gen(*, to: str, instruction: str) -> ComposeDraft:
+        return ComposeDraft(to=to, subject=subject, body=body)
+
+    fake.generate_compose = _gen
+    return fake
+
+
+def _strategy_with_draft(
+    *, oauth, cache: EmailCache, draft_generator: MagicMock
+) -> MailStrategy:
+    return MailStrategy(
+        oauth=oauth,
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter_factory=lambda creds: MagicMock(),
+        draft_generator=draft_generator,
+    )
+
+
+@pytest.mark.asyncio
+async def test_compose_returns_draft_card(cache: EmailCache) -> None:
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=_draft_generator_returning(
+            "Merhaba", "Merhaba,\n\nKısa bir selam.\n\nİyi çalışmalar."
+        ),
+    )
+    result = await strategy.execute(
+        {
+            "action": "compose",
+            "to": "ali@example.com",
+            "instruction": "merhaba yaz",
+        }
+    )
+    assert isinstance(result, Success)
+    assert result.ui_type == "MailDraftCard"
+    assert result.meta == {"action": "compose"}
+    assert result.data["to"] == "ali@example.com"
+    assert result.data["subject"] == "Merhaba"
+    assert "selam" in result.data["body"].lower()
+
+
+@pytest.mark.asyncio
+async def test_compose_rejects_invalid_recipient(cache: EmailCache) -> None:
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=_draft_generator_returning("x", "y"),
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "not-an-email", "instruction": "merhaba"}
+    )
+    assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_compose_rejects_empty_instruction(cache: EmailCache) -> None:
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=_draft_generator_returning("x", "y"),
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "ali@example.com", "instruction": "  "}
+    )
+    assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_compose_errors_when_draft_generator_unavailable(
+    cache: EmailCache,
+) -> None:
+    """A misconfigured registry shouldn't crash — surface a friendly Error."""
+    strategy = MailStrategy(
+        oauth=_oauth_with_credentials(MagicMock()),
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter_factory=lambda creds: MagicMock(),
+        # draft_generator omitted on purpose
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "ali@example.com", "instruction": "selam"}
+    )
+    assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_compose_surfaces_friendly_error_when_gemini_fails(
+    cache: EmailCache,
+) -> None:
+    from capabilities.gmail.draft import DraftGenerator, DraftGeneratorError
+
+    fake = MagicMock(spec=DraftGenerator)
+
+    async def _boom(*, to, instruction):
+        raise DraftGeneratorError("gemini offline")
+
+    fake.generate_compose = _boom
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=fake,
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "ali@example.com", "instruction": "selam"}
+    )
+    assert isinstance(result, Error)
+    assert result.retry_after == 10

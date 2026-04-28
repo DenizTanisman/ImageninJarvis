@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from core.base_strategy import CapabilityStrategy
@@ -12,7 +13,14 @@ from services.cache_sqlite import EmailCache, build_mail_key
 
 from .adapter import GmailAdapter, GmailAdapterError
 from .classifier import EmailClassifier, EmailClassifierError
+from .draft import DraftGenerator, DraftGeneratorError
 from .models import MailSummary
+
+# Voice / chat intents arrive without explicit dates — the LLM gives us
+# range_kind and we compute the window. Daily = today, Weekly = past 7
+# days. Gmail's "before" filter is inclusive of date strings on the day
+# boundary, so we use "tomorrow" as the upper bound to include today.
+DEFAULT_WEEKLY_DAYS = 7
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +36,8 @@ class MailStrategy(CapabilityStrategy):
         classifier: EmailClassifier,
         cache: EmailCache,
         adapter_factory=None,
+        now_factory=None,
+        draft_generator: DraftGenerator | None = None,
     ) -> None:
         self._oauth = oauth
         self._classifier = classifier
@@ -35,21 +45,35 @@ class MailStrategy(CapabilityStrategy):
         # Tests can inject ``adapter_factory(credentials) -> GmailAdapter`` to
         # avoid the real google-api-python-client build call.
         self._adapter_factory = adapter_factory or (lambda creds: GmailAdapter(creds))
+        # Tests freeze "today" so date defaulting is deterministic; runtime
+        # uses the wall clock.
+        self._now_factory = now_factory or (lambda: datetime.now(UTC).date())
+        # Optional — only the chat-driven compose path needs it. Tests
+        # exercising summary/cache flows don't have to wire it.
+        self._draft_generator = draft_generator
 
     def can_handle(self, intent: dict[str, Any]) -> bool:
         return intent.get("type") == "mail"
 
     async def execute(self, payload: dict[str, Any]) -> Result:
+        action = payload.get("action")
+        if action == "compose":
+            return await self._compose(payload)
         kind = payload.get("range_kind", "daily")
         after = payload.get("after")
         before = payload.get("before")
+        # Voice / chat intents only ship range_kind; compute the window
+        # from "today" so the dispatcher path doesn't need to know dates.
         if not after or not before:
-            return Error(
-                message="missing range bounds",
-                user_message="Mail aralığı belirtilmedi.",
-                user_notify=True,
-                log_level="warning",
-            )
+            computed = _resolve_range(kind, today=self._now_factory())
+            if computed is None:
+                return Error(
+                    message="missing range bounds",
+                    user_message="Mail aralığı belirtilmedi.",
+                    user_notify=True,
+                    log_level="warning",
+                )
+            after, before = computed
         max_results = int(payload.get("max_results") or 30)
         user_id = payload.get("user_id", "default")
 
@@ -134,6 +158,75 @@ class MailStrategy(CapabilityStrategy):
     def render_hint(self) -> str:
         return "MailCard"
 
+    async def _compose(self, payload: dict[str, Any]) -> Result:
+        """Generate an editable draft for a brand-new mail.
+
+        Returns ``Success(ui_type="MailDraftCard", ...)`` so the chat
+        surface renders an editable card with explicit Gönder/İptal
+        buttons. Sending is a separate route (POST /mail/send-new) that
+        the user reaches only after confirming on the card — in line with
+        CLAUDE.md §4.2 / §2.7 ("onay olmadan asla gönderme").
+        """
+        if self._draft_generator is None:
+            return Error(
+                message="compose called without draft_generator wired",
+                user_message="Mail taslak üreticisi ayarlanmamış.",
+                user_notify=True,
+                log_level="error",
+            )
+        to = (payload.get("to") or "").strip()
+        instruction = (payload.get("instruction") or "").strip()
+        if not to or "@" not in to:
+            return Error(
+                message=f"invalid recipient: {to!r}",
+                user_message="Geçerli bir alıcı e-posta adresi belirt.",
+                user_notify=True,
+                log_level="info",
+            )
+        if not instruction:
+            return Error(
+                message="empty instruction",
+                user_message="Maile ne yazmamı istediğini söyle.",
+                user_notify=True,
+                log_level="info",
+            )
+        try:
+            draft = await self._draft_generator.generate_compose(
+                to=to, instruction=instruction
+            )
+        except DraftGeneratorError as exc:
+            logger.error("compose draft failed: %s", exc)
+            return Error(
+                message=str(exc),
+                user_message="Mail taslağı oluşturulamadı, biraz sonra dener misin?",
+                retry_after=10,
+            )
+        return Success(
+            data={
+                "to": draft.to,
+                "subject": draft.subject,
+                "body": draft.body,
+                "instruction": instruction,
+            },
+            ui_type="MailDraftCard",
+            meta={"action": "compose"},
+        )
+
 
 def serialize_mail_summary(mail: MailSummary) -> dict[str, Any]:
     return asdict(mail)
+
+
+def _resolve_range(kind: Any, *, today: date) -> tuple[str, str] | None:
+    """Convert ``range_kind`` into Gmail-search-compatible YYYY-MM-DD
+    bounds. ``custom`` requires explicit dates the caller already
+    provided, so an unresolved custom returns None to trigger the
+    "missing bounds" error path."""
+    if kind == "daily":
+        after = today
+    elif kind == "weekly":
+        after = today - timedelta(days=DEFAULT_WEEKLY_DAYS - 1)
+    else:
+        return None
+    before = today + timedelta(days=1)
+    return after.isoformat(), before.isoformat()
