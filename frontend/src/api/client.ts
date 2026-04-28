@@ -105,6 +105,26 @@ export async function sendDraft(
   return postJson<SendDraftResponse>("/mail/send", draft, signal);
 }
 
+export interface MailDraftCardData {
+  to: string;
+  subject: string;
+  body: string;
+  instruction?: string;
+}
+
+export interface SendNewRequest {
+  to: string;
+  subject: string;
+  body: string;
+}
+
+export async function sendNewMail(
+  body: SendNewRequest,
+  signal?: AbortSignal,
+): Promise<SendDraftResponse> {
+  return postJson<SendDraftResponse>("/mail/send-new", body, signal);
+}
+
 export async function getAuthStatus(signal?: AbortSignal): Promise<AuthStatus> {
   let response: Response;
   try {

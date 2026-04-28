@@ -44,6 +44,8 @@ def format_for_voice(
 ) -> str:
     if ui_type == "MailCard":
         return _format_mail(data)
+    if ui_type == "MailDraftCard":
+        return _format_mail_draft(data)
     if ui_type == "TranslationCard":
         return _format_translation(data)
     if ui_type == "EventList":
@@ -77,6 +79,24 @@ def _format_mail(data: Any) -> str:
     if isinstance(needs_reply, int) and needs_reply > 0:
         summary += f" {needs_reply} tanesi yanıt bekliyor — okumamı ister misin?"
     return summary
+
+
+def _format_mail_draft(data: Any) -> str:
+    if not isinstance(data, dict):
+        return "Mail taslağı hazır."
+    to = data.get("to") or ""
+    subject = data.get("subject") or ""
+    if to and subject:
+        return (
+            f"{to} için '{subject}' başlıklı bir taslak hazırladım. "
+            "Sohbette kart üzerinden düzenleyip onaylayabilirsin."
+        )
+    if to:
+        return (
+            f"{to} için bir mail taslağı hazırladım. Sohbette kart "
+            "üzerinden onaylayabilirsin."
+        )
+    return "Mail taslağı hazır — sohbette kart üzerinden onaylayabilirsin."
 
 
 def _format_translation(data: Any) -> str:

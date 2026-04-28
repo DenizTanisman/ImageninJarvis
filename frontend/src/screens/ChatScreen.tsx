@@ -183,7 +183,12 @@ export function ChatScreen() {
   );
 }
 
-const RICH_UI_TYPES = new Set(["MailCard", "CalendarEvent", "EventList"]);
+const RICH_UI_TYPES = new Set([
+  "MailCard",
+  "CalendarEvent",
+  "EventList",
+  "MailDraftCard",
+]);
 
 function isRichUiType(uiType: string): boolean {
   return RICH_UI_TYPES.has(uiType);

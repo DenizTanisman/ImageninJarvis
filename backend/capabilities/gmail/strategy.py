@@ -13,6 +13,7 @@ from services.cache_sqlite import EmailCache, build_mail_key
 
 from .adapter import GmailAdapter, GmailAdapterError
 from .classifier import EmailClassifier, EmailClassifierError
+from .draft import DraftGenerator, DraftGeneratorError
 from .models import MailSummary
 
 # Voice / chat intents arrive without explicit dates — the LLM gives us
@@ -36,6 +37,7 @@ class MailStrategy(CapabilityStrategy):
         cache: EmailCache,
         adapter_factory=None,
         now_factory=None,
+        draft_generator: DraftGenerator | None = None,
     ) -> None:
         self._oauth = oauth
         self._classifier = classifier
@@ -46,11 +48,17 @@ class MailStrategy(CapabilityStrategy):
         # Tests freeze "today" so date defaulting is deterministic; runtime
         # uses the wall clock.
         self._now_factory = now_factory or (lambda: datetime.now(UTC).date())
+        # Optional — only the chat-driven compose path needs it. Tests
+        # exercising summary/cache flows don't have to wire it.
+        self._draft_generator = draft_generator
 
     def can_handle(self, intent: dict[str, Any]) -> bool:
         return intent.get("type") == "mail"
 
     async def execute(self, payload: dict[str, Any]) -> Result:
+        action = payload.get("action")
+        if action == "compose":
+            return await self._compose(payload)
         kind = payload.get("range_kind", "daily")
         after = payload.get("after")
         before = payload.get("before")
@@ -149,6 +157,60 @@ class MailStrategy(CapabilityStrategy):
 
     def render_hint(self) -> str:
         return "MailCard"
+
+    async def _compose(self, payload: dict[str, Any]) -> Result:
+        """Generate an editable draft for a brand-new mail.
+
+        Returns ``Success(ui_type="MailDraftCard", ...)`` so the chat
+        surface renders an editable card with explicit Gönder/İptal
+        buttons. Sending is a separate route (POST /mail/send-new) that
+        the user reaches only after confirming on the card — in line with
+        CLAUDE.md §4.2 / §2.7 ("onay olmadan asla gönderme").
+        """
+        if self._draft_generator is None:
+            return Error(
+                message="compose called without draft_generator wired",
+                user_message="Mail taslak üreticisi ayarlanmamış.",
+                user_notify=True,
+                log_level="error",
+            )
+        to = (payload.get("to") or "").strip()
+        instruction = (payload.get("instruction") or "").strip()
+        if not to or "@" not in to:
+            return Error(
+                message=f"invalid recipient: {to!r}",
+                user_message="Geçerli bir alıcı e-posta adresi belirt.",
+                user_notify=True,
+                log_level="info",
+            )
+        if not instruction:
+            return Error(
+                message="empty instruction",
+                user_message="Maile ne yazmamı istediğini söyle.",
+                user_notify=True,
+                log_level="info",
+            )
+        try:
+            draft = await self._draft_generator.generate_compose(
+                to=to, instruction=instruction
+            )
+        except DraftGeneratorError as exc:
+            logger.error("compose draft failed: %s", exc)
+            return Error(
+                message=str(exc),
+                user_message="Mail taslağı oluşturulamadı, biraz sonra dener misin?",
+                retry_after=10,
+            )
+        return Success(
+            data={
+                "to": draft.to,
+                "subject": draft.subject,
+                "body": draft.body,
+                "instruction": instruction,
+            },
+            ui_type="MailDraftCard",
+            meta={"action": "compose"},
+        )
 
 
 def serialize_mail_summary(mail: MailSummary) -> dict[str, Any]:

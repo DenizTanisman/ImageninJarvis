@@ -216,6 +216,56 @@ async def test_classifier_falls_back_when_mail_payload_missing_range() -> None:
 
 
 @pytest.mark.asyncio
+async def test_classifier_detects_mail_compose_intent() -> None:
+    raw = {
+        "type": "mail",
+        "payload": {
+            "action": "compose",
+            "to": "ali@example.com",
+            "instruction": "merhaba yaz",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify(
+        "ali@example.com'a merhaba yazan bir mail gönder"
+    )
+    assert intent.type == "mail"
+    assert intent.payload["action"] == "compose"
+    assert intent.payload["to"] == "ali@example.com"
+    assert intent.payload["instruction"] == "merhaba yaz"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_compose_recipient_missing_at() -> None:
+    raw = {
+        "type": "mail",
+        "payload": {
+            "action": "compose",
+            "to": "not-an-email",
+            "instruction": "merhaba",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("not-an-email'e merhaba yaz")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_classifier_falls_back_when_compose_instruction_empty() -> None:
+    raw = {
+        "type": "mail",
+        "payload": {
+            "action": "compose",
+            "to": "ali@example.com",
+            "instruction": "",
+        },
+    }
+    classifier = Classifier(_gemini_returning_text(json.dumps(raw)))
+    intent = await classifier.classify("ali@example.com")
+    assert intent.type == "fallback"
+
+
+@pytest.mark.asyncio
 async def test_classifier_includes_now_in_system_prompt() -> None:
     """The model needs the current timestamp to resolve "yarın", "Cuma", etc.
     Verify that whatever ``now_factory`` returns ends up in the prompt."""

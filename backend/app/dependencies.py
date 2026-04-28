@@ -165,6 +165,7 @@ def _build_mail_strategy() -> MailStrategy:
         oauth=_build_oauth_service(),
         classifier=EmailClassifier(_build_gemini_client()),
         cache=_build_email_cache(),
+        draft_generator=_build_draft_generator(),
     )
 
 

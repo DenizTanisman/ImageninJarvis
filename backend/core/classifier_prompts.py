@@ -62,13 +62,20 @@ Takvim için payload:
   - update intent'leri için her zaman "fallback" döndür — düzenleme
     ekrandaki etkinlik kartı üzerinden yapılıyor.
 
-Mail için payload:
-  {{"range_kind": "daily" | "weekly"}}
+Mail için payload (iki şekil):
+  Özet: {{"range_kind": "daily" | "weekly"}}
+  Compose: {{"action": "compose", "to": "alici@domain", "instruction": "..."}}
   - "Bugünün mailleri / inbox / gelen kutusu / e-postalar" → "daily".
   - "Bu haftaki mailler / haftalık özet" → "weekly".
   - Belirli bir tarih aralığı (özel range) chat / voice'tan istenirse
     "fallback" döndür — kullanıcı shortcut'tan custom range seçmeli.
-  - Tarih hesabı backend tarafında yapılıyor; sen sadece range_kind ver.
+  - "X@Y'ye ... yazan / ... hakkında / ... söyleyen mail at/gönder/yaz"
+    → action="compose". "to" alanına aynen e-posta adresini yaz, başına
+    "mailto:" ekleme, başka karakter çıkarma. "instruction" kullanıcının
+    içerik talimatını içerir (örn. "merhaba yaz", "yarınki sunum
+    hakkında bilgi ver"). Tarih hesabı veya alıcı adı çıkarımı yapma.
+  - Sessiz gönderme YOK — backend taslak üretip kullanıcıya kart
+    gösteriyor. Sen sadece intent'i yakala.
 
 type "fallback" ise payload boş obje ({{}}).
 
@@ -103,6 +110,15 @@ Cevap: {{"type":"mail","payload":{{"range_kind":"daily"}}}}
 
 Mesaj: "bu haftaki maillerime bir bak"
 Cevap: {{"type":"mail","payload":{{"range_kind":"weekly"}}}}
+
+Mesaj: "ali@example.com'a merhaba yazan bir mail gönder"
+Cevap: {{"type":"mail","payload":{{"action":"compose","to":"ali@example.com","instruction":"merhaba yaz"}}}}
+
+Mesaj: "veli@firma.com.tr'ye yarınki sunum hakkında kısa bir bilgilendirme yaz"
+Cevap: {{"type":"mail","payload":{{"action":"compose","to":"veli@firma.com.tr","instruction":"yarınki sunum hakkında kısa bilgilendirme"}}}}
+
+Mesaj: "send a quick hi to sample@example.com"
+Cevap: {{"type":"mail","payload":{{"action":"compose","to":"sample@example.com","instruction":"send a quick hi"}}}}
 
 Mesaj: "merhaba nasılsın"
 Cevap: {{"type":"fallback","payload":{{}}}}

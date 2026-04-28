@@ -1,8 +1,13 @@
 import { CalendarEventCard } from "@/components/capability/CalendarEventCard";
 import { EventList } from "@/components/capability/EventList";
 import { MailCard } from "@/components/capability/MailCard";
+import { MailDraftCard } from "@/components/capability/MailDraftCard";
 import { cn } from "@/lib/utils";
-import type { CalendarEventDTO, MailSummaryData } from "@/api/client";
+import type {
+  CalendarEventDTO,
+  MailDraftCardData,
+  MailSummaryData,
+} from "@/api/client";
 
 export type MessageRole = "user" | "assistant";
 
@@ -84,7 +89,20 @@ function renderPayload(payload: ChatMessagePayload | undefined) {
       <EventList initialEvents={payload.data.events} headline={headline} />
     );
   }
+  if (payload.ui_type === "MailDraftCard" && isMailDraft(payload.data)) {
+    return <MailDraftCard data={payload.data} />;
+  }
   return null;
+}
+
+function isMailDraft(value: unknown): value is MailDraftCardData {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.to === "string" &&
+    typeof v.subject === "string" &&
+    typeof v.body === "string"
+  );
 }
 
 function isEventListData(

@@ -239,3 +239,122 @@ async def test_adapter_failure_surfaces_friendly_error(cache: EmailCache) -> Non
         {"range_kind": "daily", "after": "2026-04-24", "before": "2026-04-25"}
     )
     assert isinstance(result, Error)
+
+
+# ---------- compose ----------
+
+
+def _draft_generator_returning(subject: str, body: str) -> MagicMock:
+    from capabilities.gmail.draft import ComposeDraft, DraftGenerator
+
+    fake = MagicMock(spec=DraftGenerator)
+
+    async def _gen(*, to: str, instruction: str) -> ComposeDraft:
+        return ComposeDraft(to=to, subject=subject, body=body)
+
+    fake.generate_compose = _gen
+    return fake
+
+
+def _strategy_with_draft(
+    *, oauth, cache: EmailCache, draft_generator: MagicMock
+) -> MailStrategy:
+    return MailStrategy(
+        oauth=oauth,
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter_factory=lambda creds: MagicMock(),
+        draft_generator=draft_generator,
+    )
+
+
+@pytest.mark.asyncio
+async def test_compose_returns_draft_card(cache: EmailCache) -> None:
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=_draft_generator_returning(
+            "Merhaba", "Merhaba,\n\nKısa bir selam.\n\nİyi çalışmalar."
+        ),
+    )
+    result = await strategy.execute(
+        {
+            "action": "compose",
+            "to": "ali@example.com",
+            "instruction": "merhaba yaz",
+        }
+    )
+    assert isinstance(result, Success)
+    assert result.ui_type == "MailDraftCard"
+    assert result.meta == {"action": "compose"}
+    assert result.data["to"] == "ali@example.com"
+    assert result.data["subject"] == "Merhaba"
+    assert "selam" in result.data["body"].lower()
+
+
+@pytest.mark.asyncio
+async def test_compose_rejects_invalid_recipient(cache: EmailCache) -> None:
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=_draft_generator_returning("x", "y"),
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "not-an-email", "instruction": "merhaba"}
+    )
+    assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_compose_rejects_empty_instruction(cache: EmailCache) -> None:
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=_draft_generator_returning("x", "y"),
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "ali@example.com", "instruction": "  "}
+    )
+    assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_compose_errors_when_draft_generator_unavailable(
+    cache: EmailCache,
+) -> None:
+    """A misconfigured registry shouldn't crash — surface a friendly Error."""
+    strategy = MailStrategy(
+        oauth=_oauth_with_credentials(MagicMock()),
+        classifier=_classifier_returning([]),
+        cache=cache,
+        adapter_factory=lambda creds: MagicMock(),
+        # draft_generator omitted on purpose
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "ali@example.com", "instruction": "selam"}
+    )
+    assert isinstance(result, Error)
+
+
+@pytest.mark.asyncio
+async def test_compose_surfaces_friendly_error_when_gemini_fails(
+    cache: EmailCache,
+) -> None:
+    from capabilities.gmail.draft import DraftGenerator, DraftGeneratorError
+
+    fake = MagicMock(spec=DraftGenerator)
+
+    async def _boom(*, to, instruction):
+        raise DraftGeneratorError("gemini offline")
+
+    fake.generate_compose = _boom
+    strategy = _strategy_with_draft(
+        oauth=_oauth_with_credentials(MagicMock()),
+        cache=cache,
+        draft_generator=fake,
+    )
+    result = await strategy.execute(
+        {"action": "compose", "to": "ali@example.com", "instruction": "selam"}
+    )
+    assert isinstance(result, Error)
+    assert result.retry_after == 10

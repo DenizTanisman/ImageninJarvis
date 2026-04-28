@@ -225,6 +225,60 @@ async def send_reply(
     return SendResponse(sent_message_id=payload.get("id"))
 
 
+# ---------- compose (brand-new mail) ----------
+
+
+class SendNewRequest(BaseModel):
+    to: str = Field(..., min_length=3, max_length=320)
+    subject: str = Field(default="", max_length=300)
+    body: str = Field(..., min_length=1, max_length=20000)
+
+
+@router.post("/send-new", response_model=SendResponse)
+async def send_new(
+    request: SendNewRequest,
+    oauth: OAuthDep,
+    adapter_factory: AdapterFactoryDep,
+) -> SendResponse:
+    """Send a brand-new mail (no thread).
+
+    Reached only after the user explicitly confirms a draft on the
+    chat-side MailDraftCard — sending happens on click, never on the
+    initial classify/draft pass. Same auth + scope guards as /mail/send.
+    """
+    if "@" not in request.to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçerli bir alıcı e-posta adresi belirt.",
+        )
+    creds = oauth.credentials_for()
+    if creds is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google'a bağlı değilsin.",
+        )
+    if not has_required_scopes(creds.scopes or [], GMAIL_SEND_SCOPES):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="gmail.send izni yok. Tekrar bağlanıp gönderme iznini ver.",
+        )
+    adapter = adapter_factory(creds)
+    try:
+        payload = adapter.send_new(
+            to=request.to,
+            subject=request.subject,
+            body=request.body,
+        )
+    except GmailAdapterError as exc:
+        logger.error("send_new failed: %s", exc)
+        return SendResponse(
+            error=ChatErrorPayload(
+                user_message="Mail gönderilemedi.", retry_after=10
+            )
+        )
+    return SendResponse(sent_message_id=payload.get("id"))
+
+
 def _extract_body_text(payload: dict) -> str:
     """Best-effort body extraction.
 

@@ -32,6 +32,7 @@ SUPPORTED_INTENT_TYPES: tuple[IntentType, ...] = (
 ISTANBUL = UTC  # Gemini handles tz inside the prompt; pass UTC base
 CALENDAR_VALID_ACTIONS: tuple[str, ...] = ("list", "create", "delete")
 MAIL_VALID_RANGE_KINDS: tuple[str, ...] = ("daily", "weekly")
+MAIL_VALID_ACTIONS: tuple[str, ...] = ("compose",)
 
 
 @dataclass(frozen=True)
@@ -130,7 +131,27 @@ def _valid_calendar_payload(payload: dict[str, Any]) -> bool:
 
 
 def _valid_mail_payload(payload: dict[str, Any]) -> bool:
-    """Mail intents must specify a supported range_kind. Dates are
-    computed by MailStrategy from today, so the classifier never needs
-    to produce them."""
+    """Mail intents come in two shapes:
+
+    - Summary: ``{"range_kind": "daily" | "weekly"}``
+    - Compose: ``{"action": "compose", "to": "...@...", "instruction": "..."}``
+
+    Dates are computed by MailStrategy from today, so the classifier
+    never needs to produce them. Compose validates a non-empty
+    recipient that *looks like* an address (cheap "@" check — the
+    strategy does the strict validation) and a non-empty instruction.
+    """
+    action = payload.get("action")
+    if action in MAIL_VALID_ACTIONS:
+        if action == "compose":
+            to = payload.get("to")
+            instruction = payload.get("instruction")
+            return (
+                isinstance(to, str)
+                and "@" in to
+                and bool(to.strip())
+                and isinstance(instruction, str)
+                and bool(instruction.strip())
+            )
+        return False
     return payload.get("range_kind") in MAIL_VALID_RANGE_KINDS

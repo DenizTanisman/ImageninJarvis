@@ -23,7 +23,12 @@ import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { useConversation } from "@/store/conversation";
 import { useDocumentContext } from "@/store/document";
 
-const RICH_UI_TYPES = new Set(["MailCard", "CalendarEvent", "EventList"]);
+const RICH_UI_TYPES = new Set([
+  "MailCard",
+  "CalendarEvent",
+  "EventList",
+  "MailDraftCard",
+]);
 
 const ERROR_MESSAGES: Record<string, string> = {
   "not-allowed": "Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.",
