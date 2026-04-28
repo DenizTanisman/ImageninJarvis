@@ -76,3 +76,14 @@ Voice surface speaks `meta.voice_summary` and *also* writes the same payload to 
 npm run test -- --run               # all
 npm run test -- --run ChatScreen    # filter by name
 ```
+
+### End-to-end (Playwright)
+
+5 scenarios under `tests/e2e/` cover the full user journeys called for in CLAUDE.md §8.1: welcome flow, mail batch reply, calendar create, document Q&A, voice-mode mail. Each spec mocks the backend via `page.route(`localhost:8000/...`)` so the only live process is the vite dev server.
+
+```bash
+npm run test:e2e                    # headless run (~6s)
+npm run test:e2e:ui                 # interactive UI mode
+```
+
+Uses the system Google Chrome by default (`channel: chrome` in `playwright.config.ts`). To switch to the bundled chromium build, drop `channel` and run `npx playwright install chromium` first.

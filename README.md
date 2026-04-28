@@ -88,10 +88,17 @@ npm run dev
 ### Tests
 
 ```bash
-cd backend && pytest                 # 299 tests
-cd frontend && npm run test -- --run # 83 tests
+cd backend && pytest                 # 307 tests
+cd frontend && npm run test -- --run # 83 vitest specs
 cd frontend && npm run build         # type-check + production bundle
+cd frontend && npm run test:e2e      # 5 Playwright scenarios
 ```
+
+The Playwright suite mocks the backend at the network layer with
+`page.route`, so the dev server is the only live process. By default
+it uses the system Google Chrome (`channel: chrome`). Run
+`npx playwright install chromium` once if you'd rather use the
+bundled binary.
 
 ## Security
 
