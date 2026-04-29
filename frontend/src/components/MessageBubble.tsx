@@ -1,3 +1,5 @@
+import ReactMarkdown from "react-markdown";
+
 import { CalendarEventCard } from "@/components/capability/CalendarEventCard";
 import { EventList } from "@/components/capability/EventList";
 import { MailCard } from "@/components/capability/MailCard";
@@ -8,6 +10,58 @@ import type {
   MailDraftCardData,
   MailSummaryData,
 } from "@/api/client";
+
+// Render assistant messages as markdown so headings, lists, and paragraph
+// breaks from capabilities (Journal report, etc.) come through visually
+// instead of as raw "###" / "**" text. User messages stay plain.
+const MARKDOWN_COMPONENTS = {
+  h1: (props: any) => (
+    <h1 className="mb-2 mt-3 text-base font-bold text-slate-50" {...props} />
+  ),
+  h2: (props: any) => (
+    <h2 className="mb-2 mt-3 text-sm font-bold text-slate-50" {...props} />
+  ),
+  h3: (props: any) => (
+    <h3
+      className="mb-1.5 mt-2.5 text-sm font-semibold text-slate-100"
+      {...props}
+    />
+  ),
+  p: (props: any) => <p className="mb-2 last:mb-0" {...props} />,
+  ul: (props: any) => (
+    <ul className="mb-2 list-disc space-y-1 pl-5" {...props} />
+  ),
+  ol: (props: any) => (
+    <ol className="mb-2 list-decimal space-y-1 pl-5" {...props} />
+  ),
+  li: (props: any) => <li {...props} />,
+  strong: (props: any) => (
+    <strong className="font-semibold text-slate-50" {...props} />
+  ),
+  em: (props: any) => <em className="italic text-slate-200" {...props} />,
+  code: (props: any) => (
+    <code
+      className="rounded bg-slate-900/60 px-1 py-0.5 font-mono text-xs"
+      {...props}
+    />
+  ),
+  a: (props: any) => (
+    <a
+      className="text-sky-300 underline hover:text-sky-200"
+      target="_blank"
+      rel="noreferrer"
+      {...props}
+    />
+  ),
+};
+
+function AssistantMarkdown({ text }: { text: string }) {
+  return (
+    <div className="text-sm leading-relaxed text-slate-100">
+      <ReactMarkdown components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
+    </div>
+  );
+}
 
 export type MessageRole = "user" | "assistant";
 
@@ -40,8 +94,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         className="flex w-full justify-start"
       >
         <div className="w-full max-w-[90%] rounded-2xl bg-slate-800/80 p-3 shadow ring-1 ring-slate-700">
-          <div className="mb-2 text-sm leading-relaxed text-slate-100">
-            {message.text}
+          <div className="mb-2">
+            <AssistantMarkdown text={message.text} />
           </div>
           {richNode}
         </div>
@@ -59,13 +113,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     >
       <div
         className={cn(
-          "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed shadow",
+          "rounded-2xl px-4 py-2 shadow",
           isUser
-            ? "bg-sky-500/90 text-white"
-            : "bg-slate-800/80 text-slate-100 ring-1 ring-slate-700",
+            ? "max-w-[75%] bg-sky-500/90 text-sm leading-relaxed text-white"
+            : "max-w-[85%] bg-slate-800/80 ring-1 ring-slate-700",
         )}
       >
-        {message.text}
+        {isUser ? message.text : <AssistantMarkdown text={message.text} />}
       </div>
     </div>
   );
