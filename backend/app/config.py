@@ -48,6 +48,12 @@ class Settings:
     sandbox_dir: str = field(
         default_factory=lambda: os.getenv("JARVIS_SANDBOX_DIR", "/tmp/jarvis_sandbox")
     )
+    journal_reporter_url: str = field(
+        default_factory=lambda: os.getenv("JOURNAL_REPORTER_URL", "")
+    )
+    journal_reporter_key: str = field(
+        default_factory=lambda: os.getenv("JOURNAL_REPORTER_KEY", "")
+    )
 
     @property
     def sqlite_path(self) -> str:

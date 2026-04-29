@@ -18,6 +18,7 @@ from capabilities.gmail.adapter import GmailAdapter
 from capabilities.gmail.classifier import EmailClassifier
 from capabilities.gmail.draft import DraftGenerator
 from capabilities.gmail.strategy import MailStrategy
+from capabilities.journal.strategy import JournalReportStrategy
 from capabilities.translation.strategy import TranslationStrategy
 from core.classifier import Classifier
 from core.dispatcher import Dispatcher
@@ -39,6 +40,7 @@ def _build_default_dispatcher() -> Dispatcher:
     _ensure_registered(TranslationStrategy(gemini))
     _ensure_registered(_build_calendar_strategy())
     _ensure_registered(_build_mail_strategy())
+    _ensure_registered(_build_journal_strategy())
     return Dispatcher(
         classifier=Classifier(gemini),
         registry=default_registry,
@@ -191,6 +193,21 @@ def get_gmail_adapter_factory():
     real google-api-python-client never gets touched.
     """
     return lambda creds: GmailAdapter(creds)
+
+
+@lru_cache(maxsize=1)
+def _build_journal_strategy() -> JournalReportStrategy:
+    settings = get_settings()
+    return JournalReportStrategy(
+        reporter_url=settings.journal_reporter_url,
+        reporter_key=settings.journal_reporter_key,
+    )
+
+
+def get_journal_strategy() -> JournalReportStrategy:
+    strategy = _build_journal_strategy()
+    _ensure_registered(strategy)
+    return strategy
 
 
 @lru_cache(maxsize=1)
