@@ -54,6 +54,8 @@ def format_for_voice(
         return _format_calendar_event(data, meta)
     if ui_type == "DocumentAnswer":
         return _format_document_answer(data)
+    if ui_type == "JournalReportCard":
+        return _format_journal_report(data)
     if isinstance(data, str):
         return data
     return "İşlem tamamlandı."
@@ -143,6 +145,17 @@ def _format_calendar_event(data: Any, meta: dict[str, Any] | None = None) -> str
     if action == "update":
         return f"'{summary}' güncellendi."
     return f"Tamam, '{summary}' kaydedildi."
+
+
+def _format_journal_report(data: Any) -> str:
+    """One-sentence headline; chat surface still shows the full markdown."""
+    if not isinstance(data, dict):
+        return "Günlük raporu hazır."
+    tag = data.get("tag") or "/detail"
+    count = data.get("entry_count")
+    if isinstance(count, int) and count > 0:
+        return f"{tag} raporu hazır — {count} günlük girdisi üzerinden."
+    return f"{tag} raporu hazır."
 
 
 def _format_document_answer(data: Any) -> str:

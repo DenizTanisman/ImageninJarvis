@@ -163,3 +163,20 @@ def test_unknown_ui_type_with_dict_data_returns_generic_message() -> None:
 
 def test_none_data_with_unknown_ui_type_returns_generic_message() -> None:
     assert format_for_voice(None, None) == "İşlem tamamlandı."
+
+
+def test_journal_report_with_count() -> None:
+    out = format_for_voice(
+        "JournalReportCard",
+        {"tag": "/detail", "entry_count": 6, "markdown": "# Rapor\n..."},
+    )
+    assert "/detail" in out
+    assert "6" in out
+
+
+def test_journal_report_without_count_falls_back() -> None:
+    assert format_for_voice("JournalReportCard", {"tag": "/todo"}) == "/todo raporu hazır."
+
+
+def test_journal_report_with_non_dict_data_safe_default() -> None:
+    assert format_for_voice("JournalReportCard", None) == "Günlük raporu hazır."

@@ -209,6 +209,9 @@ function formatChatReply(
   if (uiType === "TranslationCard" && isTranslationData(data)) {
     return `**${data.target_lang.toUpperCase()}**: ${data.translated_text}`;
   }
+  if (uiType === "JournalReportCard" && isJournalReportData(data)) {
+    return data.markdown;
+  }
   if (typeof data === "string") return data;
   return "İşlem tamamlandı.";
 }
@@ -221,5 +224,15 @@ function isTranslationData(
     value !== null &&
     typeof (value as Record<string, unknown>).translated_text === "string" &&
     typeof (value as Record<string, unknown>).target_lang === "string"
+  );
+}
+
+function isJournalReportData(
+  value: unknown,
+): value is { markdown: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Record<string, unknown>).markdown === "string"
   );
 }
