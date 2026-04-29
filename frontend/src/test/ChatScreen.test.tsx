@@ -145,4 +145,31 @@ describe("ChatScreen", () => {
     await user.click(screen.getByTestId("back-home"));
     expect(screen.getByTestId("current-path")).toHaveTextContent("/");
   });
+
+  it("renders journal quickbar with all four tags", () => {
+    renderAt();
+    expect(screen.getByTestId("journal-quickbar")).toBeInTheDocument();
+    expect(screen.getByTestId("journal-tag-detail")).toBeInTheDocument();
+    expect(screen.getByTestId("journal-tag-todo")).toBeInTheDocument();
+    expect(screen.getByTestId("journal-tag-concern")).toBeInTheDocument();
+    expect(screen.getByTestId("journal-tag-success")).toBeInTheDocument();
+  });
+
+  it("clicking a journal tag chip sends the tag verbatim through sendChat", async () => {
+    sendChatMock.mockResolvedValueOnce({
+      ok: true,
+      ui_type: "JournalReportCard",
+      data: { tag: "/detail", markdown: "# Rapor", entry_count: 7 },
+    });
+    const user = userEvent.setup();
+    renderAt();
+
+    await user.click(screen.getByTestId("journal-tag-detail"));
+
+    expect(sendChatMock).toHaveBeenCalledWith("/detail");
+    const list = screen.getByTestId("message-list");
+    await waitFor(() =>
+      expect(within(list).getByText("/detail")).toBeInTheDocument(),
+    );
+  });
 });
