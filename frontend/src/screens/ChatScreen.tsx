@@ -199,18 +199,20 @@ function formatChatReply(
   data: unknown,
   meta: Record<string, unknown> | null | undefined,
 ): string {
-  // Backend attaches a Turkish summary to meta.voice_summary for every
-  // capability Result; chat reuses it as the human-readable headline so
-  // the bubble never falls back to a JSON dump.
-  const voiceSummary = meta?.voice_summary;
-  if (typeof voiceSummary === "string" && voiceSummary.trim()) {
-    return voiceSummary;
-  }
+  // UI-specific renders take priority. meta.voice_summary is a one-line
+  // headline meant for the voice surface; chat must show the full payload
+  // (translation result, journal report markdown, etc.) when one exists.
   if (uiType === "TranslationCard" && isTranslationData(data)) {
     return `**${data.target_lang.toUpperCase()}**: ${data.translated_text}`;
   }
   if (uiType === "JournalReportCard" && isJournalReportData(data)) {
     return data.markdown;
+  }
+  // Fall back to voice_summary so capabilities without a chat-specific
+  // formatter still produce a Turkish bubble instead of "İşlem tamamlandı."
+  const voiceSummary = meta?.voice_summary;
+  if (typeof voiceSummary === "string" && voiceSummary.trim()) {
+    return voiceSummary;
   }
   if (typeof data === "string") return data;
   return "İşlem tamamlandı.";
