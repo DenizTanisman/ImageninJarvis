@@ -58,6 +58,17 @@ class Dispatcher:
             logger.info(
                 "No registered strategy for intent type %s; using fallback", intent.type
             )
+        else:
+            # Even on fallback, let registered strategies claim the message
+            # via text-based heuristics. The Gemini classifier doesn't know
+            # about project-specific syntax like /detail, /todo, /date{...},
+            # so a strategy that recognises them in `text` would otherwise
+            # never run.
+            strategy = self._registry.find({"type": "fallback", "text": intent.text})
+            if strategy is not None:
+                return await strategy.execute(
+                    {"text": intent.text, **intent.payload},
+                )
 
         return await self._fallback(intent)
 

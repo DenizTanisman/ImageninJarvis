@@ -142,7 +142,9 @@ async def test_falls_back_when_no_registered_strategy_handles_intent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fallback_intent_skips_registry_lookup() -> None:
+async def test_fallback_intent_does_not_route_to_strategy_keyed_only_by_type() -> None:
+    """A strategy that only checks intent.type still gets bypassed on fallback —
+    the fallback probe inspects can_handle, not just the type."""
     registry = CapabilityRegistry()
     accidental = _MailLikeStrategy()
     registry.register(accidental)
@@ -156,3 +158,44 @@ async def test_fallback_intent_skips_registry_lookup() -> None:
     assert isinstance(result, Success)
     assert result.data == "genel cevap"
     assert accidental.calls == []
+
+
+class _TagWatchingStrategy(CapabilityStrategy):
+    """Mirrors JournalReportStrategy's pattern: claims any text starting
+    with a slash-tag, regardless of the classifier's verdict."""
+
+    name = "tag_strategy"
+    intent_keys = ("/detail",)
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def can_handle(self, intent: dict) -> bool:
+        return (intent.get("text") or "").lstrip().startswith("/")
+
+    async def execute(self, payload: dict) -> Result:
+        self.calls.append(payload)
+        return Success(data="tag handled", ui_type="JournalReportCard")
+
+
+@pytest.mark.asyncio
+async def test_fallback_path_still_offers_text_based_strategies_a_chance() -> None:
+    """Regression for /detail being silently swallowed by the fallback path.
+
+    Project-specific syntax like /detail or /date{...} doesn't reach the
+    Gemini classifier as a known intent type, so the dispatcher must let
+    text-aware strategies (JournalReportStrategy) inspect the message
+    before defaulting to the generic completion."""
+    registry = CapabilityRegistry()
+    journal_like = _TagWatchingStrategy()
+    registry.register(journal_like)
+
+    dispatcher = Dispatcher(
+        classifier=Classifier(),  # no Gemini → always fallback
+        registry=registry,
+        gemini=_gemini_with_text("should-not-be-called"),
+    )
+    result = await dispatcher.handle("/detail son 7 gün")
+    assert isinstance(result, Success)
+    assert result.ui_type == "JournalReportCard"
+    assert journal_like.calls == [{"text": "/detail son 7 gün"}]
