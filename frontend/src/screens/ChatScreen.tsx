@@ -8,6 +8,7 @@ import { BotAvatar } from "@/components/BotAvatar";
 import { CapabilityModal } from "@/components/capability/CapabilityModal";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageBubble } from "@/components/MessageBubble";
+import { JournalQuickbar } from "@/components/JournalQuickbar";
 import { ShortcutBar, type CapabilityKey } from "@/components/ShortcutBar";
 import { useConversation } from "@/store/conversation";
 import { useDocumentContext } from "@/store/document";
@@ -168,6 +169,8 @@ export function ChatScreen() {
           </button>
         </div>
       )}
+
+      <JournalQuickbar onSelect={handleSend} disabled={isSending} />
 
       <ChatInput
         onSend={handleSend}
