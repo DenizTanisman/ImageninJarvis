@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type MailRangeKind = "daily" | "weekly" | "custom";
+export type MailRangeKind = "daily" | "custom" | "compose";
 
 export interface MailRangeState {
   kind: MailRangeKind;
@@ -48,9 +48,12 @@ export function resolveRangeBounds(range: MailRangeState): {
   if (range.kind === "custom") {
     return { after: range.customAfter, before: range.customBefore };
   }
+  // `daily` is the only summary range left; `compose` short-circuits the
+  // fetch path entirely (the card renders a draft instead of a list) but
+  // we still return a sensible default so any caller that ignores `kind`
+  // doesn't get surprising data.
   const before = today();
-  const days = range.kind === "weekly" ? 7 : 1;
   const after = new Date();
-  after.setDate(after.getDate() - days);
+  after.setDate(after.getDate() - 1);
   return { after: after.toISOString().slice(0, 10), before };
 }

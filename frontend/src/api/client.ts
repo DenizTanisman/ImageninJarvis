@@ -42,8 +42,14 @@ export interface MailEntry {
   thread_id?: string;
 }
 
+// `weekly` is no longer offered in the UI (replaced by `compose`), but the
+// backend may still echo it back for legacy summaries cached pre-rollout —
+// keeping the literal in the wire type avoids a runtime crash on an old
+// payload. New requests only ever send `daily` or `custom`.
+export type MailSummaryRangeKind = "daily" | "weekly" | "custom";
+
 export interface MailSummaryData {
-  range: { kind: "daily" | "weekly" | "custom"; after: string; before: string };
+  range: { kind: MailSummaryRangeKind; after: string; before: string };
   categories: {
     important: MailEntry[];
     dm: MailEntry[];
@@ -59,10 +65,36 @@ export type MailSummaryResponse =
   | ChatErrorResponse;
 
 export async function fetchMailSummary(
-  body: { range_kind: "daily" | "weekly" | "custom"; after: string; before: string; max_results?: number },
+  body: { range_kind: "daily" | "custom"; after: string; before: string; max_results?: number },
   signal?: AbortSignal,
 ): Promise<MailSummaryResponse> {
   return postJson<MailSummaryResponse>("/mail/summary", body, signal);
+}
+
+export interface MailMessageDetail {
+  id: string;
+  thread_id: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  body: string;
+  snippet: string;
+}
+
+export async function fetchMailMessage(
+  messageId: string,
+  signal?: AbortSignal,
+): Promise<MailMessageDetail> {
+  const res = await fetch(
+    `${API_BASE_URL}/mail/message/${encodeURIComponent(messageId)}`,
+    { signal },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new ChatNetworkError(text || `Mail alınamadı (HTTP ${res.status})`);
+  }
+  return (await res.json()) as MailMessageDetail;
 }
 
 export interface AuthStatus {

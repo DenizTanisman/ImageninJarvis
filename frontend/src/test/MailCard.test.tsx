@@ -103,12 +103,34 @@ describe("MailCard real-data flow", () => {
     await screen.findByTestId("mail-cat-important");
     expect(fetchMailSummaryMock).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByTestId("range-weekly"));
+    await user.click(screen.getByTestId("range-custom"));
     await waitFor(() => expect(fetchMailSummaryMock).toHaveBeenCalledTimes(2));
     const lastCallArg = fetchMailSummaryMock.mock.calls[1][0] as {
       range_kind: string;
     };
-    expect(lastCallArg.range_kind).toBe("weekly");
+    expect(lastCallArg.range_kind).toBe("custom");
+  });
+
+  it("compose tab short-circuits the fetch and renders a blank draft", async () => {
+    getAuthStatusMock.mockResolvedValue({ connected: true, scopes: [], can_send: true });
+    fetchMailSummaryMock.mockResolvedValue({
+      ok: true,
+      ui_type: "MailCard",
+      data: fakePayload,
+      meta: { source: "live" },
+    });
+
+    const user = userEvent.setup();
+    render(<MailCard />);
+    await screen.findByTestId("mail-cat-important");
+    expect(fetchMailSummaryMock).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByTestId("range-compose"));
+
+    // Draft card is visible…
+    await screen.findByTestId("mail-draft-card");
+    // …and the mail-summary fetch was NOT called again.
+    expect(fetchMailSummaryMock).toHaveBeenCalledTimes(1);
   });
 
   it("renders friendly error when backend returns ok:false", async () => {
