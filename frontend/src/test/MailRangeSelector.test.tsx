@@ -17,11 +17,11 @@ describe("MailRangeSelector", () => {
     expect(screen.queryByTestId("custom-range-fields")).toBeNull();
   });
 
-  it("switches to weekly and updates store", async () => {
+  it("switches to compose and updates store", async () => {
     const user = userEvent.setup();
     render(<MailRangeSelector />);
-    await user.click(screen.getByTestId("range-weekly"));
-    expect(useMailUI.getState().range.kind).toBe("weekly");
+    await user.click(screen.getByTestId("range-compose"));
+    expect(useMailUI.getState().range.kind).toBe("compose");
   });
 
   it("switches to custom and reveals date inputs bound to the store", async () => {
@@ -57,15 +57,19 @@ describe("resolveRangeBounds", () => {
     expect(diffDays).toBeCloseTo(1, 0);
   });
 
-  it("returns 7-day window for weekly", () => {
+  it("returns 1-day window for compose (no fetch path uses this)", () => {
+    // The compose tab short-circuits in MailCard before resolveRangeBounds
+    // is consulted, but the helper still has to return something sensible
+    // so any caller that ignores `kind` doesn't get NaN dates. We pin the
+    // 1-day default so a stale caller falls into the safest range.
     const { after, before } = resolveRangeBounds({
-      kind: "weekly",
+      kind: "compose",
       customAfter: "x",
       customBefore: "y",
     });
     const diffDays =
       (new Date(before).getTime() - new Date(after).getTime()) / 86_400_000;
-    expect(diffDays).toBeCloseTo(7, 0);
+    expect(diffDays).toBeCloseTo(1, 0);
   });
 
   it("returns custom bounds for custom kind", () => {

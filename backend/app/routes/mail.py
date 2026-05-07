@@ -105,6 +105,66 @@ async def auth_status(oauth: OAuthDep) -> AuthStatusResponse:
     )
 
 
+# ---------- single message detail ----------
+
+
+class MessageDetailResponse(BaseModel):
+    id: str
+    thread_id: str
+    from_: str = Field(..., alias="from")
+    to: str
+    subject: str
+    date: str
+    body: str
+    snippet: str
+
+    model_config = {"populate_by_name": True}
+
+
+@router.get("/message/{message_id}", response_model=MessageDetailResponse)
+async def get_message_detail(
+    message_id: str,
+    oauth: OAuthDep,
+    adapter_factory: AdapterFactoryDep,
+) -> MessageDetailResponse:
+    """Fetch the full text body + headers for a single Gmail message.
+
+    The summary endpoint only carries snippets (Gemini-generated +
+    Gmail's own ~150-char preview). The chat / inbox surfaces use this
+    when the user wants the actual mail content."""
+    creds = oauth.credentials_for()
+    if creds is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google'a bağlı değilsin.",
+        )
+    adapter = adapter_factory(creds)
+    try:
+        payload = adapter.get_full_message(message_id)
+    except GmailAdapterError as exc:
+        logger.warning("get_full_message failed for %s: %s", message_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Mail içeriği alınamadı.",
+        ) from exc
+
+    headers = {
+        h["name"].lower(): h["value"]
+        for h in payload.get("payload", {}).get("headers", [])
+    }
+    body_text = _extract_body_text(payload)
+    return MessageDetailResponse(
+        id=payload.get("id", message_id),
+        thread_id=payload.get("threadId", ""),
+        **{"from": headers.get("from", "")},
+        to=headers.get("to", ""),
+        subject=headers.get("subject", "(no subject)"),
+        date=headers.get("date", ""),
+        body=body_text,
+        snippet=payload.get("snippet", ""),
+    )
+
+
 # ---------- batch reply ----------
 
 

@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 
 const OPTIONS: Array<{ key: MailRangeKind; label: string }> = [
   { key: "daily", label: "Günlük" },
-  { key: "weekly", label: "Haftalık" },
   { key: "custom", label: "Özel aralık" },
+  { key: "compose", label: "Gönder" },
 ];
 
 export function MailRangeSelector() {
