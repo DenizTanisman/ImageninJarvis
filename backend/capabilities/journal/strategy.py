@@ -9,7 +9,7 @@ the markdown back to the user.
 Two boundaries we hold:
 - never log the journal payload (PII)
 - never raise — convert transport / auth / rate-limit errors into Error
-  results with friendly Turkish messages
+  results with friendly English messages
 """
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ class JournalReportStrategy(CapabilityStrategy):
         if tag is None:
             return Error(
                 message="no journal tag detected",
-                user_message="Hangi günlük komutunu istediğini anlamadım (/detail, /todo, /concern, /success, /date{gg.aa.yyyy}).",
+                user_message="I didn't recognise which journal command you meant (/detail, /todo, /concern, /success, /date{dd.mm.yyyy}).",
                 user_notify=True,
                 log_level="info",
             )
@@ -79,7 +79,7 @@ class JournalReportStrategy(CapabilityStrategy):
         if not self._reporter_url or not self._reporter_key:
             return Error(
                 message="reporter not configured",
-                user_message="Journal Reporter şu an yapılandırılmamış. Yöneticine söyle.",
+                user_message="The Journal Reporter isn't configured right now. Please contact the administrator.",
                 user_notify=True,
                 log_level="warning",
             )
@@ -94,14 +94,14 @@ class JournalReportStrategy(CapabilityStrategy):
         except httpx.TimeoutException:
             return Error(
                 message="reporter timeout",
-                user_message="Journal Reporter şu an yanıt vermiyor, biraz sonra dene.",
+                user_message="The Journal Reporter isn't responding right now — please try again in a moment.",
                 retry_after=15,
             )
         except httpx.RequestError as exc:
             logger.warning("journal reporter unreachable: %s", exc)
             return Error(
                 message=f"reporter unreachable: {exc}",
-                user_message="Journal Reporter'a ulaşamıyorum, biraz sonra dene.",
+                user_message="I can't reach the Journal Reporter — please try again in a moment.",
                 retry_after=15,
             )
 
@@ -171,7 +171,7 @@ def _http_error_to_result(response: httpx.Response, *, tag: str) -> Error:
     if status == 401:
         return Error(
             message="reporter auth failed",
-            user_message="Journal Reporter kimlik doğrulaması başarısız.",
+            user_message="Journal Reporter authentication failed.",
             user_notify=True,
             log_level="error",
         )
@@ -179,31 +179,31 @@ def _http_error_to_result(response: httpx.Response, *, tag: str) -> Error:
         if code == "date_not_in_range":
             return Error(
                 message="date not in range",
-                user_message=f"{tag} için aralıkta giriş yok.",
+                user_message=f"No journal entries found in range for {tag}.",
                 user_notify=True,
                 log_level="info",
             )
         return Error(
             message="no entries",
-            user_message="Bu aralıkta günlük girişi bulamadım.",
+            user_message="I couldn't find any journal entries in this range.",
             user_notify=True,
             log_level="info",
         )
     if status == 429:
         return Error(
             message="reporter rate limited",
-            user_message="Çok hızlı istek attın, biraz bekle.",
+            user_message="You're sending requests too fast — please wait a bit.",
             retry_after=30,
         )
     if status in (502, 503):
         return Error(
             message=f"reporter upstream {status}",
-            user_message="Journal Reporter şu an erişilemiyor (Cornell veya Gemini düştü).",
+            user_message="Journal Reporter is unreachable right now (Cornell or Gemini is down).",
             retry_after=30,
         )
     return Error(
         message=f"reporter http {status}: {upstream_msg or 'unknown'}",
-        user_message="Journal Reporter beklenmedik bir cevap döndü.",
+        user_message="Journal Reporter returned an unexpected response.",
         user_notify=True,
         log_level="error",
     )

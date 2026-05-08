@@ -71,12 +71,12 @@ def _ensure_drive_credentials(oauth: GoogleOAuthService):
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google'a bağlı değilsin.",
+            detail="You aren't connected to Google.",
         )
     if not has_required_scopes(creds.scopes or [], DRIVE_SCOPES):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Drive izni yok. Tekrar bağlanıp Drive iznini ver.",
+            detail="Drive permission missing. Please reconnect and grant Drive access.",
         )
     return creds
 
@@ -93,7 +93,7 @@ async def list_files(
         logger.error("Drive list failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Drive listesi alınamadı.",
+            detail="Couldn't fetch the Drive list.",
         ) from exc
     return DriveListResponse(
         files=[DriveFileEntry(**_serialise(f)) for f in files]
@@ -120,13 +120,13 @@ async def import_file(
         logger.error("Drive list failed during import: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Drive listesi alınamadı.",
+            detail="Couldn't fetch the Drive list.",
         ) from exc
     match = next((f for f in files if f.id == request.file_id), None)
     if match is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bu dosya Drive'da görünmüyor (veya desteklenmeyen tip).",
+            detail="This file isn't visible in Drive (or its type isn't supported).",
         )
 
     try:
@@ -135,7 +135,7 @@ async def import_file(
         logger.error("Drive download failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Drive dosyası indirilemedi.",
+            detail="Couldn't download the Drive file.",
         ) from exc
 
     try:

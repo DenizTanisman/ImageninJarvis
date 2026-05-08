@@ -64,7 +64,7 @@ def test_post_chat_returns_error_payload_when_gemini_unreachable(client: TestCli
     body = response.json()
     assert body["ok"] is False
     assert body["error"]["retry_after"] == 10
-    assert "tekrar" in body["error"]["user_message"].lower()
+    assert "try again" in body["error"]["user_message"].lower()
 
 
 def test_post_chat_rejects_empty_text(client: TestClient) -> None:
@@ -86,4 +86,4 @@ def test_post_chat_returns_friendly_error_for_whitespace_only(client: TestClient
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is False
-    assert "yazmamışsın" in body["error"]["user_message"]
+    assert "didn't say anything" in body["error"]["user_message"]

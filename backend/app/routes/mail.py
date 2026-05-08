@@ -136,7 +136,7 @@ async def get_message_detail(
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google'a bağlı değilsin.",
+            detail="You aren't connected to Google.",
         )
     adapter = adapter_factory(creds)
     try:
@@ -145,7 +145,7 @@ async def get_message_detail(
         logger.warning("get_full_message failed for %s: %s", message_id, exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Mail içeriği alınamadı.",
+            detail="Couldn't fetch the mail content.",
         ) from exc
 
     headers = {
@@ -196,7 +196,7 @@ async def generate_drafts(
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google'a bağlı değilsin.",
+            detail="You aren't connected to Google.",
         )
     adapter = adapter_factory(creds)
 
@@ -259,13 +259,13 @@ async def send_reply(
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google'a bağlı değilsin.",
+            detail="You aren't connected to Google.",
         )
     if not has_required_scopes(creds.scopes or [], GMAIL_SEND_SCOPES):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
-                "gmail.send izni yok. Tekrar bağlanıp gönderme iznini ver."
+                "gmail.send permission missing. Please reconnect and grant send access."
             ),
         )
     adapter = adapter_factory(creds)
@@ -280,7 +280,7 @@ async def send_reply(
     except GmailAdapterError as exc:
         logger.error("send failed: %s", exc)
         return SendResponse(
-            error=ChatErrorPayload(user_message="Mail gönderilemedi.", retry_after=10)
+            error=ChatErrorPayload(user_message="Couldn't send the mail.", retry_after=10)
         )
     return SendResponse(sent_message_id=payload.get("id"))
 
@@ -309,18 +309,18 @@ async def send_new(
     if "@" not in request.to:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Geçerli bir alıcı e-posta adresi belirt.",
+            detail="Please provide a valid recipient email address.",
         )
     creds = oauth.credentials_for()
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Google'a bağlı değilsin.",
+            detail="You aren't connected to Google.",
         )
     if not has_required_scopes(creds.scopes or [], GMAIL_SEND_SCOPES):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="gmail.send izni yok. Tekrar bağlanıp gönderme iznini ver.",
+            detail="gmail.send permission missing. Please reconnect and grant send access.",
         )
     adapter = adapter_factory(creds)
     try:
@@ -333,7 +333,7 @@ async def send_new(
         logger.error("send_new failed: %s", exc)
         return SendResponse(
             error=ChatErrorPayload(
-                user_message="Mail gönderilemedi.", retry_after=10
+                user_message="Couldn't send the mail.", retry_after=10
             )
         )
     return SendResponse(sent_message_id=payload.get("id"))

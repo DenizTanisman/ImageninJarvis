@@ -2,7 +2,7 @@
 
 Step 6.1: when a request comes from the voice surface, dumping a JSON
 ``MailSummary`` to the TTS engine produces nonsense. This module reads
-the structured ``Result.data`` and ``ui_type`` and returns a short Turkish
+the structured ``Result.data`` and ``ui_type`` and returns a short English
 sentence the synthesiser can speak naturally.
 
 The transformation is deterministic — no LLM round-trip — because:
@@ -12,28 +12,28 @@ The transformation is deterministic — no LLM round-trip — because:
   the long form there.
 
 If a ui_type isn't recognised the formatter falls back to ``data`` if it's
-a string, and to a generic "İşlem tamamlandı" otherwise.
+a string, and to a generic "Done." otherwise.
 """
 from __future__ import annotations
 
 from typing import Any
 
 CATEGORY_LABEL: dict[str, str] = {
-    "important": "önemli",
-    "dm": "kişisel",
-    "promo": "promosyon",
-    "other": "diğer",
+    "important": "important",
+    "dm": "personal",
+    "promo": "promotional",
+    "other": "other",
 }
 
 LANG_LABEL: dict[str, str] = {
-    "tr": "Türkçe",
-    "en": "İngilizce",
-    "de": "Almanca",
-    "fr": "Fransızca",
-    "es": "İspanyolca",
-    "ru": "Rusça",
-    "ar": "Arapça",
-    "auto": "otomatik",
+    "tr": "Turkish",
+    "en": "English",
+    "de": "German",
+    "fr": "French",
+    "es": "Spanish",
+    "ru": "Russian",
+    "ar": "Arabic",
+    "auto": "auto",
 }
 
 
@@ -58,142 +58,142 @@ def format_for_voice(
         return _format_journal_report(data)
     if isinstance(data, str):
         return data
-    return "İşlem tamamlandı."
+    return "Done."
 
 
 def _format_mail(data: Any) -> str:
     if not isinstance(data, dict):
-        return "Mail özeti hazır."
+        return "Mail summary ready."
     categories = data.get("categories") or {}
     counts = {key: len(categories.get(key, []) or []) for key in CATEGORY_LABEL}
     total = data.get("total")
     if isinstance(total, int) and total == 0:
-        return "Bu aralıkta mailin yok."
+        return "You have no mail in this range."
     parts = [
         f"{counts[key]} {CATEGORY_LABEL[key]}"
         for key in ("important", "dm", "promo", "other")
         if counts[key] > 0
     ]
     if not parts:
-        return "Bu aralıkta mailin yok."
-    summary = ", ".join(parts) + " mail var."
+        return "You have no mail in this range."
+    summary = "You have " + ", ".join(parts) + " mail."
     needs_reply = data.get("needs_reply_count")
     if isinstance(needs_reply, int) and needs_reply > 0:
-        summary += f" {needs_reply} tanesi yanıt bekliyor — okumamı ister misin?"
+        summary += f" {needs_reply} of them need a reply — want me to read them?"
     return summary
 
 
 def _format_mail_draft(data: Any) -> str:
     if not isinstance(data, dict):
-        return "Mail taslağı hazır."
+        return "Mail draft ready."
     to = data.get("to") or ""
     subject = data.get("subject") or ""
     if to and subject:
         return (
-            f"{to} için '{subject}' başlıklı bir taslak hazırladım. "
-            "Sohbette kart üzerinden düzenleyip onaylayabilirsin."
+            f"I drafted a mail to {to} with subject '{subject}'. "
+            "You can edit and confirm it on the card in chat."
         )
     if to:
         return (
-            f"{to} için bir mail taslağı hazırladım. Sohbette kart "
-            "üzerinden onaylayabilirsin."
+            f"I drafted a mail to {to}. You can confirm it on the "
+            "card in chat."
         )
-    return "Mail taslağı hazır — sohbette kart üzerinden onaylayabilirsin."
+    return "Mail draft ready — you can confirm it on the card in chat."
 
 
 def _format_translation(data: Any) -> str:
     if not isinstance(data, dict):
-        return "Çeviri hazır."
+        return "Translation ready."
     target = data.get("target_lang")
     text = data.get("translated_text") or ""
     label = LANG_LABEL.get(str(target).lower(), str(target).upper() if target else "")
     if label:
         return f"{label}: {text}"
-    return text or "Çeviri hazır."
+    return text or "Translation ready."
 
 
 def _format_event_list(data: Any) -> str:
     if not isinstance(data, dict):
-        return "Etkinlik listesi hazır."
+        return "Event list ready."
     events = data.get("events") or []
     if not isinstance(events, list) or not events:
-        return "Önümüzdeki günlerde etkinlik yok."
+        return "No events on the calendar in the days ahead."
     count = len(events)
     if count == 1:
         only = events[0]
-        return f"Bir etkinlik var: {_short_event(only)}."
+        return f"You have one event: {_short_event(only)}."
     head = events[0]
     return (
-        f"{count} etkinlik var. İlki {_short_event(head)}. "
-        "Hepsini ister misin?"
+        f"You have {count} events. The first is {_short_event(head)}. "
+        "Want me to read all of them?"
     )
 
 
 def _format_calendar_event(data: Any, meta: dict[str, Any] | None = None) -> str:
     if not isinstance(data, dict):
-        return "Etkinlik kaydedildi."
-    summary = data.get("summary", "etkinlik")
+        return "Event saved."
+    summary = data.get("summary", "event")
     action = (meta or {}).get("action")
     if action == "delete_proposal":
-        # Chat surface shows a card with a Sil button; voice surface
+        # Chat surface shows a card with a Delete button; voice surface
         # asks the user to confirm there since multi-turn voice delete
         # confirmation is deferred to v2.
         return (
-            f"'{summary}' etkinliğini silmek üzeresin. Sohbette kart "
-            "üzerinden onaylar mısın?"
+            f"You're about to delete the event '{summary}'. Please "
+            "confirm on the card in chat."
         )
     if action == "update":
-        return f"'{summary}' güncellendi."
-    return f"Tamam, '{summary}' kaydedildi."
+        return f"'{summary}' updated."
+    return f"Done — '{summary}' saved."
 
 
 def _format_journal_report(data: Any) -> str:
     """One-sentence headline; chat surface still shows the full markdown."""
     if not isinstance(data, dict):
-        return "Günlük raporu hazır."
+        return "Journal report ready."
     tag = data.get("tag") or "/detail"
     count = data.get("entry_count")
     if isinstance(count, int) and count > 0:
-        return f"{tag} raporu hazır — {count} günlük girdisi üzerinden."
-    return f"{tag} raporu hazır."
+        return f"{tag} report ready — based on {count} journal entries."
+    return f"{tag} report ready."
 
 
 def _format_document_answer(data: Any) -> str:
     if not isinstance(data, dict):
-        return "Belge cevabı hazır."
+        return "Document answer ready."
     answer = data.get("answer")
     if isinstance(answer, str) and answer.strip():
         return answer.strip()
-    return "Belgeden bir cevap çıkmadı."
+    return "No answer could be derived from the document."
 
 
 def _short_event(event: Any) -> str:
     if not isinstance(event, dict):
-        return "etkinlik"
-    summary = event.get("summary") or "etkinlik"
+        return "event"
+    summary = event.get("summary") or "event"
     start = event.get("start") or ""
     if isinstance(start, str) and len(start) >= 16:
-        # 2026-04-28T14:00:00+03:00 → "28 Nisan saat 14:00"
+        # 2026-04-28T14:00:00+03:00 → "April 28 at 14:00"
         date_part = start[:10]
         time_part = start[11:16]
-        return f"{summary}, {_human_date(date_part)} saat {time_part}"
+        return f"{summary}, {_human_date(date_part)} at {time_part}"
     return f"{summary}"
 
 
-_TR_MONTHS = (
-    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+_EN_MONTHS = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
 )
 
 
 def _human_date(date_part: str) -> str:
-    """``2026-04-28`` → ``28 Nisan``. Falls back to the raw string on
+    """``2026-04-28`` → ``April 28``. Falls back to the raw string on
     malformed input."""
     try:
         year, month, day = date_part.split("-")
         idx = int(month) - 1
         if not 0 <= idx < 12:
             return date_part
-        return f"{int(day)} {_TR_MONTHS[idx]}"
+        return f"{_EN_MONTHS[idx]} {int(day)}"
     except (ValueError, IndexError):
         return date_part

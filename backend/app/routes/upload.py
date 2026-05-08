@@ -70,7 +70,7 @@ async def _read_capped(file: UploadFile) -> bytes:
         if total > MAX_BYTES:
             raise HTTPException(
                 status_code=413,
-                detail=f"Dosya 10 MB sınırını aşıyor ({total} bayt).",
+                detail=f"File exceeds the 10 MB limit ({total} bytes).",
             )
         chunks.append(chunk)
     return b"".join(chunks)

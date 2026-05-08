@@ -69,7 +69,7 @@ class MailStrategy(CapabilityStrategy):
             if computed is None:
                 return Error(
                     message="missing range bounds",
-                    user_message="Mail aralığı belirtilmedi.",
+                    user_message="No mail range specified.",
                     user_notify=True,
                     log_level="warning",
                 )
@@ -90,13 +90,13 @@ class MailStrategy(CapabilityStrategy):
             logger.error("Credential refresh failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Google bağlantın yenilenemedi, tekrar bağlan.",
+                user_message="Couldn't refresh your Google connection — please reconnect.",
                 retry_after=None,
             )
         if credentials is None:
             return Error(
                 message="not connected",
-                user_message="Google'a bağlı değilsin. Önce mail erişimi için bağlan.",
+                user_message="You aren't connected to Google. Please connect first to grant mail access.",
                 user_notify=True,
                 log_level="info",
             )
@@ -110,7 +110,7 @@ class MailStrategy(CapabilityStrategy):
             logger.error("Gmail list failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Mailler çekilirken bir sorun oldu.",
+                user_message="There was a problem fetching your mail.",
                 retry_after=10,
             )
 
@@ -120,7 +120,7 @@ class MailStrategy(CapabilityStrategy):
             logger.error("Classifier failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Mailler kategorize edilemedi, biraz sonra tekrar dener misin?",
+                user_message="Couldn't categorize the mail — please try again in a moment.",
                 retry_after=15,
             )
 
@@ -170,7 +170,7 @@ class MailStrategy(CapabilityStrategy):
         if self._draft_generator is None:
             return Error(
                 message="compose called without draft_generator wired",
-                user_message="Mail taslak üreticisi ayarlanmamış.",
+                user_message="The mail draft generator is not configured.",
                 user_notify=True,
                 log_level="error",
             )
@@ -179,14 +179,14 @@ class MailStrategy(CapabilityStrategy):
         if not to or "@" not in to:
             return Error(
                 message=f"invalid recipient: {to!r}",
-                user_message="Geçerli bir alıcı e-posta adresi belirt.",
+                user_message="Please provide a valid recipient email address.",
                 user_notify=True,
                 log_level="info",
             )
         if not instruction:
             return Error(
                 message="empty instruction",
-                user_message="Maile ne yazmamı istediğini söyle.",
+                user_message="Tell me what you want the mail to say.",
                 user_notify=True,
                 log_level="info",
             )
@@ -198,7 +198,7 @@ class MailStrategy(CapabilityStrategy):
             logger.error("compose draft failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Mail taslağı oluşturulamadı, biraz sonra dener misin?",
+                user_message="Couldn't create the mail draft — please try again in a moment.",
                 retry_after=10,
             )
         return Success(

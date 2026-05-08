@@ -58,8 +58,8 @@ async def callback(
         logger.warning("OAuth callback received error=%r code=%r", error, code)
         return HTMLResponse(
             _result_page(
-                title="Bağlantı iptal edildi",
-                body=f"Google bağlantısı tamamlanamadı ({error or 'no code'}).",
+                title="Connection cancelled",
+                body=f"Google connection couldn't be completed ({error or 'no code'}).",
             ),
             status_code=400,
         )
@@ -75,9 +75,9 @@ async def callback(
 
     return HTMLResponse(
         _result_page(
-            title="Google bağlantısı başarılı",
+            title="Google connection successful",
             body=(
-                f"<code>{result.user_id}</code> için scope'lar kaydedildi: "
+                f"Saved scopes for <code>{result.user_id}</code>: "
                 f"{', '.join(result.granted_scopes)}"
             ),
             redirect_to="http://localhost:5173/chat",
@@ -93,14 +93,14 @@ def _result_page(*, title: str, body: str, redirect_to: str | None = None) -> st
     )
     redirect_note = (
         '<p style="color:#94a3b8;margin-top:2rem;font-size:0.9rem;">'
-        'Birkaç saniye içinde Jarvis arayüzüne yönlendiriliyorsun.</p>'
+        'You will be redirected to the Jarvis UI in a few seconds.</p>'
         if redirect_to
         else '<p style="color:#94a3b8;margin-top:2rem;font-size:0.9rem;">'
-             "Bu sekmeyi kapatabilirsin, Jarvis arayüzüne dön.</p>"
+             "You can close this tab and return to Jarvis.</p>"
     )
     return f"""
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head><meta charset="utf-8"><title>{title}</title>{redirect_meta}</head>
 <body style="font-family:system-ui;background:#0f172a;color:#e2e8f0;padding:2rem;">
   <h1 style="margin-bottom:1rem;">{title}</h1>

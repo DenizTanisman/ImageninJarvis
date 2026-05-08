@@ -45,7 +45,7 @@ class DocumentStrategy(CapabilityStrategy):
         if action != "ask":
             return Error(
                 message=f"unknown action: {action!r}",
-                user_message="Bu döküman isteğini anlayamadım.",
+                user_message="I couldn't understand this document request.",
                 user_notify=True,
                 log_level="info",
             )
@@ -54,21 +54,21 @@ class DocumentStrategy(CapabilityStrategy):
         if not doc_id:
             return Error(
                 message="missing doc_id",
-                user_message="Hangi belge hakkında soruyorsun?",
+                user_message="Which document are you asking about?",
                 user_notify=True,
                 log_level="info",
             )
         if not question:
             return Error(
                 message="empty question",
-                user_message="Sorunu yazmamışsın.",
+                user_message="You didn't include a question.",
                 user_notify=True,
                 log_level="info",
             )
         if len(question) > MAX_QUESTION_CHARS:
             return Error(
                 message="question too long",
-                user_message=f"Soru en fazla {MAX_QUESTION_CHARS} karakter olabilir.",
+                user_message=f"Question must be at most {MAX_QUESTION_CHARS} characters.",
                 user_notify=True,
                 log_level="info",
             )
@@ -78,14 +78,14 @@ class DocumentStrategy(CapabilityStrategy):
         except DocumentStoreError:
             return Error(
                 message="unknown doc_id",
-                user_message="Bu belge artık sistemde yok, tekrar yükle.",
+                user_message="This document is no longer in the system — please re-upload it.",
                 user_notify=True,
                 log_level="info",
             )
         if not meta.chunks:
             return Error(
                 message="no chunks",
-                user_message="Belgenin içeriği boş çıktı, başka bir dosya dene.",
+                user_message="The document came out empty — please try a different file.",
                 user_notify=True,
                 log_level="info",
             )
@@ -101,7 +101,7 @@ class DocumentStrategy(CapabilityStrategy):
             logger.error("Document QA Gemini call failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Belge cevabı üretilemedi, biraz sonra tekrar dene.",
+                user_message="Couldn't generate an answer from the document — please try again in a moment.",
                 retry_after=15,
             )
 

@@ -84,7 +84,7 @@ async def test_returns_error_when_user_not_connected(cache: EmailCache) -> None:
         {"range_kind": "daily", "after": "2026-04-24", "before": "2026-04-25"}
     )
     assert isinstance(result, Error)
-    assert "bağlı" in result.user_message.lower()
+    assert "aren't connected" in result.user_message.lower()
 
 
 @pytest.mark.asyncio

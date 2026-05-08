@@ -43,7 +43,7 @@ def test_summary_returns_success_payload(client: TestClient) -> None:
 
 def test_summary_returns_error_payload(client: TestClient) -> None:
     fake = _strategy_with_result(
-        Error(message="not connected", user_message="Google bağlı değil")
+        Error(message="not connected", user_message="Not connected to Google")
     )
     app.dependency_overrides[get_mail_strategy] = lambda: fake
     response = client.post(
@@ -53,7 +53,7 @@ def test_summary_returns_error_payload(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is False
-    assert "bağlı" in body["error"]["user_message"].lower()
+    assert "not connected" in body["error"]["user_message"].lower()
 
 
 def test_summary_validates_request_body(client: TestClient) -> None:
