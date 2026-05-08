@@ -137,7 +137,7 @@ function renderPayload(payload: ChatMessagePayload | undefined) {
   if (payload.ui_type === "EventList" && isEventListData(payload.data)) {
     const isCandidates = payload.meta?.action === "delete_candidates";
     const headline = isCandidates
-      ? "Birden fazla eşleşme buldum — silmek istediğine Sil de."
+      ? "Found multiple matches — click Delete on the one you want to remove."
       : undefined;
     return (
       <EventList initialEvents={payload.data.events} headline={headline} />

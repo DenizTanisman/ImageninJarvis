@@ -59,8 +59,8 @@ export function BatchReplyView({
         className="space-y-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100"
       >
         <p>
-          Mail göndermek için Google bağlantını yenileyip{" "}
-          <code>gmail.send</code> iznini de vermen lazım.
+          To send mail you'll need to refresh your Google connection and grant the{" "}
+          <code>gmail.send</code> permission.
         </p>
         <a
           href={googleConnectUrl()}
@@ -69,7 +69,7 @@ export function BatchReplyView({
           data-testid="reply-reconnect"
           className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
         >
-          Tekrar Google'a bağlan
+          Reconnect to Google
         </a>
       </div>
     );
@@ -78,7 +78,7 @@ export function BatchReplyView({
   if (candidates.length === 0) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-300">
-        Şu an yanıt bekleyen mail yok.
+        No mail awaiting reply right now.
       </div>
     );
   }
@@ -105,8 +105,8 @@ export function BatchReplyView({
           kind: "error",
           message:
             response.failures.length > 0
-              ? "Hiçbir taslak üretilemedi, biraz sonra dener misin?"
-              : "Seçili mailler için taslak alınamadı.",
+              ? "Couldn't produce any drafts — please try again in a moment."
+              : "Couldn't fetch drafts for the selected mail.",
         });
         return;
       }
@@ -120,13 +120,13 @@ export function BatchReplyView({
       });
       if (response.failures.length > 0) {
         toast.info(
-          `${response.failures.length} mail için taslak üretilemedi.`,
+          `Couldn't produce a draft for ${response.failures.length} mail.`,
           { duration: 2500 },
         );
       }
     } catch (err) {
       const message =
-        err instanceof ChatNetworkError ? err.message : "Beklenmeyen bir hata.";
+        err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.";
       setPhase({ kind: "error", message });
     }
   };
@@ -150,7 +150,7 @@ export function BatchReplyView({
         className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-8 text-sm text-slate-400"
       >
         <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-        Taslaklar üretiliyor…
+        Generating drafts…
       </div>
     );
   }
@@ -167,7 +167,7 @@ export function BatchReplyView({
           onClick={onClose}
           className="rounded bg-slate-800 px-3 py-1 text-xs text-slate-200"
         >
-          Kapat
+          Close
         </button>
       </div>
     );
@@ -200,8 +200,8 @@ function SelectStep({
   return (
     <div data-testid="reply-select" className="space-y-3">
       <p className="text-sm text-slate-300">
-        Cevaplamak istediklerini işaretle. Her mail için taslağı tek tek
-        onaylayacaksın.
+        Select the ones you want to reply to. You'll confirm each draft
+        individually.
       </p>
       <ul className="space-y-2">
         {candidates.map((entry) => {
@@ -246,7 +246,7 @@ function SelectStep({
           onClick={onCancel}
           className="rounded px-3 py-1 text-xs text-slate-300 hover:text-slate-100"
         >
-          Vazgeç
+          Cancel
         </button>
         <button
           type="button"
@@ -255,7 +255,7 @@ function SelectStep({
           onClick={onContinue}
           className="rounded bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
         >
-          Seçileni cevapla ({selectedIds.size})
+          Reply to selected ({selectedIds.size})
         </button>
       </div>
     </div>
@@ -296,17 +296,17 @@ function ReviewStep({ drafts, onUpdate, onClose }: ReviewStepProps) {
       const response = await sendDraft(draft);
       if (response.sent_message_id) {
         updateRow(index, { status: "sent" });
-        toast.success("Mail gönderildi.", { duration: 2500 });
+        toast.success("Mail sent.", { duration: 2500 });
       } else {
         updateRow(index, { status: "failed" });
-        toast.error(response.error?.user_message ?? "Mail gönderilemedi.", {
+        toast.error(response.error?.user_message ?? "Couldn't send the mail.", {
           duration: 3000,
         });
       }
     } catch (err) {
       updateRow(index, { status: "failed" });
       const message =
-        err instanceof ChatNetworkError ? err.message : "Beklenmeyen hata.";
+        err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.";
       toast.error(message, { duration: 3000 });
     }
   };
@@ -314,7 +314,7 @@ function ReviewStep({ drafts, onUpdate, onClose }: ReviewStepProps) {
   return (
     <div data-testid="reply-review" className="space-y-4">
       <p className="text-sm text-slate-300">
-        Her taslağı düzenleyebilirsin. Onay olmadan hiçbir mail gönderilmez.
+        You can edit each draft. No mail is sent without your confirmation.
       </p>
       {drafts.map((draft, index) => (
         <DraftCard
@@ -333,7 +333,7 @@ function ReviewStep({ drafts, onUpdate, onClose }: ReviewStepProps) {
           onClick={onClose}
           className="rounded px-3 py-1 text-xs text-slate-400 hover:text-slate-100"
         >
-          Kapat
+          Close
         </button>
       </div>
     </div>
@@ -355,28 +355,28 @@ function DraftCard({ draft, onBodyChange, onApprove, onSkip }: DraftCardProps) {
         return (
           <span className="flex items-center gap-1 text-xs text-sky-300">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Gönderiliyor…
+            Sending…
           </span>
         );
       case "sent":
         return (
           <span className="flex items-center gap-1 text-xs text-emerald-300">
             <Check className="h-3 w-3" />
-            Gönderildi
+            Sent
           </span>
         );
       case "skipped":
         return (
           <span className="flex items-center gap-1 text-xs text-slate-400">
             <Undo2 className="h-3 w-3" />
-            Atlandı
+            Skipped
           </span>
         );
       case "failed":
         return (
           <span className="flex items-center gap-1 text-xs text-rose-300">
             <X className="h-3 w-3" />
-            Başarısız
+            Failed
           </span>
         );
       default:
@@ -422,7 +422,7 @@ function DraftCard({ draft, onBodyChange, onApprove, onSkip }: DraftCardProps) {
             disabled={draft.status === "sending"}
             className="rounded px-3 py-1 text-xs text-slate-400 hover:text-slate-200 disabled:cursor-not-allowed"
           >
-            Atla
+            Skip
           </button>
           <button
             type="button"
@@ -432,7 +432,7 @@ function DraftCard({ draft, onBodyChange, onApprove, onSkip }: DraftCardProps) {
             className="flex items-center gap-1 rounded bg-sky-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
           >
             <Send className="h-3 w-3" />
-            Onayla & gönder
+            Approve & send
           </button>
         </div>
       )}

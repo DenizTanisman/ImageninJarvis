@@ -45,7 +45,7 @@ describe("ChatScreen", () => {
     renderAt();
     expect(screen.getByRole("img", { name: /Jarvis bot avatar/i })).toBeInTheDocument();
     expect(screen.getByTestId("shortcut-mail")).toBeInTheDocument();
-    expect(screen.getByText(/nasıl yardımcı olabilirim/i)).toBeInTheDocument();
+    expect(screen.getByText(/how can I help/i)).toBeInTheDocument();
     expect(screen.getByTestId("send-button")).toBeDisabled();
   });
 
@@ -119,7 +119,7 @@ describe("ChatScreen", () => {
     await waitFor(() =>
       expect(
         within(screen.getByTestId("message-list")).getByText(
-          /beklenmeyen|hata/i,
+          /unexpected|error/i,
         ),
       ).toBeInTheDocument(),
     );

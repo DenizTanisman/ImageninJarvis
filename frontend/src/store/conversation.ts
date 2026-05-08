@@ -20,7 +20,7 @@ export interface ConversationState {
 const GREETING: ChatMessage = {
   id: "welcome",
   role: "assistant",
-  text: "Merhaba, size nasıl yardımcı olabilirim?",
+  text: "Hello, how can I help you?",
   createdAt: 0,
 };
 

@@ -22,20 +22,20 @@ interface CapabilityModalProps {
 
 const META: Record<CapabilityKey, { title: string; description: string }> = {
   mail: {
-    title: "Mail — günlük özet",
-    description: "Kategori kategori ayrılmış son mailler.",
+    title: "Mail — daily summary",
+    description: "Recent mail grouped by category.",
   },
   translation: {
-    title: "Çeviri",
-    description: "Kaynak dili ve hedef dili seç, metni yapıştır, Gemini çevirir.",
+    title: "Translate",
+    description: "Pick source and target languages, paste text, Gemini translates.",
   },
   calendar: {
-    title: "Takvim",
-    description: "Etkinlik oluştur veya 7 günlük ajandayı gör.",
+    title: "Calendar",
+    description: "Create an event or see the next 7 days.",
   },
   document: {
-    title: "Döküman",
-    description: "Drive'dan seç veya PDF/TXT yükle, belgeden soru sor.",
+    title: "Document",
+    description: "Pick from Drive or upload a PDF/TXT and ask questions about it.",
   },
 };
 
@@ -71,7 +71,7 @@ export function CapabilityModal({ capability, onOpenChange }: CapabilityModalPro
                 <CalendarForm onCreated={handleEventCreated} />
                 <div>
                   <h3 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
-                    Yaklaşan etkinlikler
+                    Upcoming events
                   </h3>
                   <EventList reloadKey={calendarReloadKey} />
                 </div>

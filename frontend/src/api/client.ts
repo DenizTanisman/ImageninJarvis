@@ -92,7 +92,7 @@ export async function fetchMailMessage(
   );
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new ChatNetworkError(text || `Mail alınamadı (HTTP ${res.status})`);
+    throw new ChatNetworkError(text || `Couldn't fetch mail (HTTP ${res.status})`);
   }
   return (await res.json()) as MailMessageDetail;
 }
@@ -162,10 +162,10 @@ export async function getAuthStatus(signal?: AbortSignal): Promise<AuthStatus> {
   try {
     response = await fetch(`${API_BASE_URL}/mail/auth-status`, { signal });
   } catch (err) {
-    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+    throw new ChatNetworkError("Couldn't reach the backend.", err);
   }
   if (!response.ok) {
-    throw new ChatNetworkError(`Sunucu hatası (HTTP ${response.status}).`);
+    throw new ChatNetworkError(`Server error (HTTP ${response.status}).`);
   }
   return (await response.json()) as AuthStatus;
 }
@@ -274,7 +274,7 @@ export async function uploadDocument(
       signal,
     });
   } catch (err) {
-    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+    throw new ChatNetworkError("Couldn't reach the backend.", err);
   }
   if (!response.ok) {
     let detail = `HTTP ${response.status}`;
@@ -302,13 +302,13 @@ export async function listDriveFiles(signal?: AbortSignal): Promise<DriveFileDTO
   try {
     response = await fetch(`${API_BASE_URL}/drive/files`, { signal });
   } catch (err) {
-    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+    throw new ChatNetworkError("Couldn't reach the backend.", err);
   }
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new ChatNetworkError("Drive'a bağlı değilsin ya da Drive iznini vermemişsin.");
+      throw new ChatNetworkError("You aren't connected to Drive or haven't granted Drive permission.");
     }
-    throw new ChatNetworkError(`Drive listesi alınamadı (HTTP ${response.status}).`);
+    throw new ChatNetworkError(`Couldn't fetch the Drive list (HTTP ${response.status}).`);
   }
   const body = (await response.json()) as { files: DriveFileDTO[] };
   return body.files;
@@ -327,7 +327,7 @@ export async function importDriveFile(
       signal,
     });
   } catch (err) {
-    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+    throw new ChatNetworkError("Couldn't reach the backend.", err);
   }
   if (!response.ok) {
     let detail = `HTTP ${response.status}`;
@@ -375,7 +375,7 @@ async function postJson<T>(path: string, body: unknown, signal?: AbortSignal): P
       signal,
     });
   } catch (err) {
-    throw new ChatNetworkError("Backend'e ulaşılamadı.", err);
+    throw new ChatNetworkError("Couldn't reach the backend.", err);
   }
 
   if (!response.ok && response.status !== 200) {

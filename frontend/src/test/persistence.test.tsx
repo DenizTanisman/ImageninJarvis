@@ -54,7 +54,7 @@ describe("mode-agnostic persistence", () => {
     expect(useMode.getState().mode).toBe("voice");
     // greeting + (user1 + assistant1) + (user2 + assistant2) = 5
     expect(screen.getByTestId("voice-msg-count")).toHaveTextContent(
-      /5 mesaj/,
+      /5 messages/,
     );
 
     await user.click(screen.getByTestId("switch-to-chat"));
@@ -64,7 +64,7 @@ describe("mode-agnostic persistence", () => {
     expect(within(list).getByText("ilk mesaj")).toBeInTheDocument();
     expect(within(list).getByText("ikinci mesaj")).toBeInTheDocument();
     expect(
-      within(list).getByText(/nasıl yardımcı olabilirim/i),
+      within(list).getByText(/how can I help/i),
     ).toBeInTheDocument();
   });
 });

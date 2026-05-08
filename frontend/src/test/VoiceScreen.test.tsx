@@ -111,14 +111,14 @@ describe("VoiceScreen", () => {
     sttState.isSupported = false;
     renderAt();
     expect(sttState.start).not.toHaveBeenCalled();
-    expect(screen.getByTestId("voice-status")).toHaveTextContent(/desteklenmiyor/i);
+    expect(screen.getByTestId("voice-status")).toHaveTextContent(/not supported/i);
   });
 
   it("renders pulsing avatar and bot status", () => {
     sttState.isListening = true;
     renderAt();
     expect(screen.getByRole("img", { name: /Jarvis bot avatar/i })).toBeInTheDocument();
-    expect(screen.getByTestId("voice-status")).toHaveTextContent(/dinleniyor/i);
+    expect(screen.getByTestId("voice-status")).toHaveTextContent(/listening/i);
   });
 
   it("shows interim transcript while user is speaking", () => {
@@ -167,7 +167,7 @@ describe("VoiceScreen", () => {
   it("renders friendly error when permission is denied", () => {
     sttState.error = "not-allowed";
     renderAt();
-    expect(screen.getByTestId("voice-error")).toHaveTextContent(/reddedildi/i);
+    expect(screen.getByTestId("voice-error")).toHaveTextContent(/denied/i);
   });
 
   it("toggles mic stop when listening", async () => {
@@ -234,7 +234,7 @@ describe("VoiceScreen", () => {
       sttState.onError!("no-speech");
     });
     expect(ttsState.speak).toHaveBeenCalledWith(
-      expect.stringMatching(/duyamadım/i),
+      expect.stringMatching(/didn't hear/i),
     );
   });
 });

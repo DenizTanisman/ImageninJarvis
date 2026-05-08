@@ -94,7 +94,7 @@ describe("mode toggle continuity (voice → chat)", () => {
     expect(within(list).getByText("ses ile ikinci")).toBeInTheDocument();
     expect(within(list).getByText("Cevap 2")).toBeInTheDocument();
     expect(
-      within(list).getByText(/nasıl yardımcı olabilirim/i),
+      within(list).getByText(/how can I help/i),
     ).toBeInTheDocument();
   });
 
@@ -122,7 +122,7 @@ describe("mode toggle continuity (voice → chat)", () => {
 
     await user.click(screen.getByTestId("nav-voice"));
     expect(useMode.getState().mode).toBe("voice");
-    expect(screen.getByTestId("voice-msg-count")).toHaveTextContent(/3 mesaj/);
+    expect(screen.getByTestId("voice-msg-count")).toHaveTextContent(/3 messages/);
 
     await user.click(screen.getByTestId("switch-to-chat"));
     expect(useMode.getState().mode).toBe("chat");

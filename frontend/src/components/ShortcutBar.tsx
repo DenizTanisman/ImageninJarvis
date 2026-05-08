@@ -14,9 +14,9 @@ interface ShortcutDef {
 
 const SHORTCUTS: ShortcutDef[] = [
   { key: "mail", label: "Mail", icon: Mail, accent: "text-rose-300" },
-  { key: "translation", label: "Çeviri", icon: Languages, accent: "text-emerald-300" },
-  { key: "calendar", label: "Takvim", icon: CalendarDays, accent: "text-amber-300" },
-  { key: "document", label: "Döküman", icon: FileText, accent: "text-sky-300" },
+  { key: "translation", label: "Translate", icon: Languages, accent: "text-emerald-300" },
+  { key: "calendar", label: "Calendar", icon: CalendarDays, accent: "text-amber-300" },
+  { key: "document", label: "Document", icon: FileText, accent: "text-sky-300" },
 ];
 
 interface ShortcutBarProps {

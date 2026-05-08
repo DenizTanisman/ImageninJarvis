@@ -41,7 +41,7 @@ export function ChatInput({ onSend, onVoicePress, disabled }: ChatInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Mesajını yaz veya sol alttaki mikrofona bas…"
+        placeholder="Type a message or press the mic in the lower left…"
         rows={1}
         disabled={disabled}
         className={cn(
@@ -55,7 +55,7 @@ export function ChatInput({ onSend, onVoicePress, disabled }: ChatInputProps) {
         type="button"
         data-testid="voice-toggle"
         onClick={onVoicePress}
-        aria-label="Sesli konuş"
+        aria-label="Speak"
         className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-sky-300 ring-1 ring-slate-700 transition hover:ring-sky-400"
       >
         <Mic className="h-5 w-5" />
@@ -64,7 +64,7 @@ export function ChatInput({ onSend, onVoicePress, disabled }: ChatInputProps) {
         type="submit"
         data-testid="send-button"
         disabled={disabled || value.trim().length === 0}
-        aria-label="Gönder"
+        aria-label="Send"
         className={cn(
           "flex h-11 w-11 items-center justify-center rounded-full transition",
           "bg-sky-500 text-white hover:bg-sky-400",

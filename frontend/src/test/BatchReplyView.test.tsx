@@ -117,7 +117,7 @@ describe("BatchReplyView", () => {
       needs_reply_count: 0,
     };
     render(<BatchReplyView summary={empty} authStatus={baseAuth} onClose={vi.fn()} />);
-    expect(screen.getByText(/yanıt bekleyen mail yok/i)).toBeInTheDocument();
+    expect(screen.getByText(/no mail awaiting reply/i)).toBeInTheDocument();
   });
 
   it("requests drafts for selected ids and shows review step", async () => {
@@ -202,7 +202,7 @@ describe("BatchReplyView", () => {
     render(<BatchReplyView summary={baseSummary} authStatus={baseAuth} onClose={vi.fn()} />);
     await user.click(screen.getByTestId("reply-continue"));
     expect(await screen.findByTestId("reply-error")).toHaveTextContent(
-      /üretilemedi/i,
+      /couldn't produce/i,
     );
   });
 });

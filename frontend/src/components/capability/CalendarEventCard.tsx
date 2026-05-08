@@ -28,15 +28,15 @@ type Status = "active" | "deleted";
 
 const BADGE_STYLES: Record<CalendarCardAction, { label: string; cls: string }> = {
   create: {
-    label: "yeni etkinlik",
+    label: "new event",
     cls: "bg-emerald-500/15 text-emerald-200",
   },
   update: {
-    label: "güncellendi",
+    label: "updated",
     cls: "bg-emerald-500/15 text-emerald-200",
   },
   delete_proposal: {
-    label: "silmek üzeresin",
+    label: "about to delete",
     cls: "bg-rose-500/15 text-rose-200",
   },
 };
@@ -56,14 +56,14 @@ export function CalendarEventCard({ event: initial, action }: CalendarEventCardP
         event_id: event.id,
       });
       if (response.ok) {
-        toast.success(`"${event.summary}" silindi.`, { duration: 2500 });
+        toast.success(`"${event.summary}" deleted.`, { duration: 2500 });
         setStatus("deleted");
       } else {
         toast.error(response.error.user_message, { duration: 3000 });
       }
     } catch (err) {
       toast.error(
-        err instanceof ChatNetworkError ? err.message : "Beklenmeyen bir hata.",
+        err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.",
         { duration: 3000 },
       );
     }
@@ -75,7 +75,7 @@ export function CalendarEventCard({ event: initial, action }: CalendarEventCardP
         data-testid="calendar-event-card"
         className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-500"
       >
-        Etkinlik silindi.
+        Event deleted.
       </div>
     );
   }
@@ -124,8 +124,8 @@ export function CalendarEventCard({ event: initial, action }: CalendarEventCardP
       </div>
       {isDeleteProposal && (
         <p className="mt-2 text-xs text-rose-200/90">
-          Bu etkinliği silmek istediğine emin misin? Onaylarsan kalıcı olarak
-          silinecek.
+          Are you sure you want to delete this event? Confirming will
+          permanently remove it.
         </p>
       )}
       <div className="mt-2 flex justify-end gap-2">
@@ -137,7 +137,7 @@ export function CalendarEventCard({ event: initial, action }: CalendarEventCardP
             className="flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-300 transition hover:bg-slate-800"
           >
             <Pencil className="h-3 w-3" />
-            Düzenle
+            Edit
           </button>
         )}
         <button
@@ -152,7 +152,7 @@ export function CalendarEventCard({ event: initial, action }: CalendarEventCardP
           )}
         >
           <Trash2 className="h-3 w-3" />
-          Sil
+          Delete
         </button>
       </div>
 

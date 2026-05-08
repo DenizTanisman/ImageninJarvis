@@ -57,22 +57,22 @@ describe("EventList real-data flow", () => {
   it("shows reconnect prompt when backend signals missing scope", async () => {
     callCalendarMock.mockResolvedValueOnce({
       ok: false,
-      error: { user_message: "Takvim izni yok.", retry_after: null },
+      error: { user_message: "Calendar permission missing.", retry_after: null },
     });
     render(<EventList />);
     expect(await screen.findByTestId("events-needs-auth")).toHaveTextContent(
-      /takvim izni/i,
+      /calendar permission/i,
     );
   });
 
   it("shows generic error when backend signals other failure", async () => {
     callCalendarMock.mockResolvedValueOnce({
       ok: false,
-      error: { user_message: "Takvim isteği başarısız oldu.", retry_after: 10 },
+      error: { user_message: "Calendar request failed.", retry_after: 10 },
     });
     render(<EventList />);
     expect(await screen.findByTestId("events-error")).toHaveTextContent(
-      /başarısız/i,
+      /failed/i,
     );
   });
 
@@ -83,7 +83,7 @@ describe("EventList real-data flow", () => {
       data: { events: [], days: 7 },
     });
     render(<EventList />);
-    expect(await screen.findByText(/etkinlik yok/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no events/i)).toBeInTheDocument();
   });
 
   it("delete button opens confirm dialog and only sends after confirm", async () => {

@@ -14,8 +14,8 @@ import { useConversation } from "@/store/conversation";
 import { useDocumentContext } from "@/store/document";
 
 const STEP_TOAST: Partial<Record<CapabilityKey, string>> = {
-  calendar: "Takvim Step 4'te gelecek.",
-  document: "Döküman Q&A Step 5'te gelecek.",
+  calendar: "Calendar arrives in Step 4.",
+  document: "Document Q&A arrives in Step 5.",
 };
 
 export function ChatScreen() {
@@ -79,7 +79,7 @@ export function ChatScreen() {
       const message =
         err instanceof ChatNetworkError
           ? err.message
-          : "Beklenmeyen bir hata oluştu.";
+          : "An unexpected error occurred.";
       addMessage("assistant", message);
       toast.error(message, { duration: 3000 });
     } finally {
@@ -96,7 +96,7 @@ export function ChatScreen() {
   };
 
   const handleVoicePress = () => {
-    toast.info("Sesli mod Step 1.7'de devreye girecek.", { duration: 2000 });
+    toast.info("Voice mode arrives in Step 1.7.", { duration: 2000 });
     navigate("/voice");
   };
 
@@ -110,12 +110,12 @@ export function ChatScreen() {
           className="flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-400 transition hover:text-sky-300"
         >
           <ArrowLeft className="h-4 w-4" />
-          Ana
+          Home
         </button>
         <BotAvatar size="sm" />
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-slate-100">Jarvis</span>
-          <span className="text-xs text-slate-500">Sohbet modu</span>
+          <span className="text-xs text-slate-500">Chat mode</span>
         </div>
       </header>
 
@@ -123,7 +123,7 @@ export function ChatScreen() {
 
       <section
         ref={listRef}
-        aria-label="Mesaj listesi"
+        aria-label="Message list"
         data-testid="message-list"
         className="flex-1 space-y-3 overflow-y-auto px-4 py-6"
       >
@@ -136,7 +136,7 @@ export function ChatScreen() {
             className="flex items-center gap-2 px-4 text-xs text-slate-400"
           >
             <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-            Düşünüyor…
+            Thinking…
           </div>
         )}
       </section>
@@ -150,19 +150,19 @@ export function ChatScreen() {
           <span className="min-w-0 flex-1 truncate">
             <span className="font-semibold">{activeDoc.original_name}</span>
             <span className="ml-2 text-emerald-200/70">
-              · sorularını bu belgeye göre cevaplıyorum
+              · answering your questions based on this document
             </span>
           </span>
           <button
             type="button"
             onClick={() => {
               clearActiveDoc();
-              toast.info("Belge bağlamı kapatıldı — genel sohbete döndün.", {
+              toast.info("Document context cleared — back to general chat.", {
                 duration: 2000,
               });
             }}
             data-testid="clear-active-doc"
-            aria-label="Belge bağlamını kapat"
+            aria-label="Clear document context"
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-emerald-200 transition hover:bg-emerald-500/20"
           >
             <X className="h-3.5 w-3.5" />
@@ -212,13 +212,13 @@ function formatChatReply(
     return data.markdown;
   }
   // Fall back to voice_summary so capabilities without a chat-specific
-  // formatter still produce a Turkish bubble instead of "İşlem tamamlandı."
+  // formatter still produce a meaningful bubble instead of "Done."
   const voiceSummary = meta?.voice_summary;
   if (typeof voiceSummary === "string" && voiceSummary.trim()) {
     return voiceSummary;
   }
   if (typeof data === "string") return data;
-  return "İşlem tamamlandı.";
+  return "Done.";
 }
 
 function isTranslationData(

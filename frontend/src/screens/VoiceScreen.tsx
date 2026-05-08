@@ -31,13 +31,13 @@ const RICH_UI_TYPES = new Set([
 ]);
 
 const ERROR_MESSAGES: Record<string, string> = {
-  "not-allowed": "Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.",
-  "service-not-allowed": "Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.",
-  "audio-capture": "Mikrofon bulunamadı. Bağlı bir mikrofon olmalı.",
-  network: "Konuşma servisine ulaşılamadı (network).",
-  "no-speech": "Sesini duyamadım, tekrar dener misin?",
-  unsupported: "Tarayıcın sesli moda destek vermiyor (Chrome veya Edge dene).",
-  unknown: "Sesli mod hatası.",
+  "not-allowed": "Microphone access denied. Please grant permission in your browser settings.",
+  "service-not-allowed": "Microphone access denied. Please grant permission in your browser settings.",
+  "audio-capture": "No microphone found. Please connect one.",
+  network: "Couldn't reach the speech service (network).",
+  "no-speech": "I didn't hear you — could you try again?",
+  unsupported: "Your browser doesn't support voice mode (try Chrome or Edge).",
+  unknown: "Voice mode error.",
 };
 
 export function VoiceScreen() {
@@ -91,7 +91,7 @@ export function VoiceScreen() {
         const message =
           err instanceof ChatNetworkError
             ? err.message
-            : "Beklenmeyen bir hata oluştu.";
+            : "An unexpected error occurred.";
         addMessage("assistant", message);
         toast.error(message, { duration: 3000 });
       } finally {
@@ -158,14 +158,14 @@ export function VoiceScreen() {
     recognition.transcript || recognition.interimTranscript;
   const status =
     !recognition.isSupported
-      ? "Sesli mod desteklenmiyor"
+      ? "Voice mode not supported"
       : isSending
-        ? "Gönderiyor…"
+        ? "Sending…"
         : synth.isSpeaking
-          ? "Konuşuyor…"
+          ? "Speaking…"
           : recognition.isListening
-            ? "Dinleniyor…"
-            : "Mikrofon kapalı";
+            ? "Listening…"
+            : "Mic off";
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-10 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 px-6 text-slate-100">
@@ -180,7 +180,7 @@ export function VoiceScreen() {
         className="absolute left-4 top-4 flex items-center gap-1 rounded px-3 py-1 text-sm text-slate-300 transition hover:text-sky-300"
       >
         <ArrowLeft className="h-4 w-4" />
-        Ana ekran
+        Home
       </button>
 
       <div className="flex flex-col items-center gap-4">
@@ -192,7 +192,7 @@ export function VoiceScreen() {
           {status}
         </p>
         <p data-testid="voice-msg-count" className="text-xs text-slate-500">
-          Geçmişte {messageCount} mesaj
+          {messageCount} messages in history
         </p>
       </div>
 
@@ -203,7 +203,7 @@ export function VoiceScreen() {
           visibleTranscript ? "" : "text-slate-500",
         )}
       >
-        {visibleTranscript || "Konuşmaya başla, yazıya dökeyim."}
+        {visibleTranscript || "Start speaking and I'll transcribe."}
       </div>
 
       {recognition.error && (
@@ -221,7 +221,7 @@ export function VoiceScreen() {
           onClick={toggleMic}
           disabled={!recognition.isSupported || isSending}
           data-testid="mic-toggle"
-          aria-label={recognition.isListening ? "Mikrofonu kapat" : "Mikrofonu aç"}
+          aria-label={recognition.isListening ? "Turn microphone off" : "Turn microphone on"}
           className={cn(
             "flex h-14 w-14 items-center justify-center rounded-full transition",
             recognition.isListening
@@ -242,7 +242,7 @@ export function VoiceScreen() {
             type="button"
             onClick={stopSpeaking}
             data-testid="stop-speaking"
-            aria-label="TTS'i durdur"
+            aria-label="Stop TTS"
             className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-amber-300 ring-1 ring-slate-700 hover:ring-amber-400"
           >
             <VolumeX className="h-5 w-5" />
@@ -261,7 +261,7 @@ export function VoiceScreen() {
         className="flex items-center gap-2 rounded-full bg-slate-800/80 px-6 py-3 text-sm text-slate-100 ring-1 ring-sky-400/30 transition hover:bg-slate-800 hover:ring-sky-400/70"
       >
         <MessageSquare className="h-4 w-4" />
-        Chat'e geç
+        Switch to chat
       </button>
     </main>
   );
@@ -275,5 +275,5 @@ function pickVoiceReply(result: ChatSuccessResponse): string {
   if (typeof result.data === "string") {
     return result.data;
   }
-  return "İşlem tamamlandı.";
+  return "Done.";
 }

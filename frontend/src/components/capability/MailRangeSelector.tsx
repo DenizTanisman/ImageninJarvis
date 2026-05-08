@@ -2,9 +2,9 @@ import { useMailUI, type MailRangeKind } from "@/store/mail";
 import { cn } from "@/lib/utils";
 
 const OPTIONS: Array<{ key: MailRangeKind; label: string }> = [
-  { key: "daily", label: "Günlük" },
-  { key: "custom", label: "Özel aralık" },
-  { key: "compose", label: "Gönder" },
+  { key: "daily", label: "Daily" },
+  { key: "custom", label: "Custom range" },
+  { key: "compose", label: "Compose" },
 ];
 
 export function MailRangeSelector() {
@@ -43,7 +43,7 @@ export function MailRangeSelector() {
           className="grid grid-cols-2 gap-2 rounded-lg border border-slate-700 bg-slate-900/40 p-3"
         >
           <label className="flex flex-col gap-1 text-xs text-slate-400">
-            Başlangıç
+            Start
             <input
               type="date"
               data-testid="range-custom-after"
@@ -54,7 +54,7 @@ export function MailRangeSelector() {
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-slate-400">
-            Bitiş
+            End
             <input
               type="date"
               data-testid="range-custom-before"

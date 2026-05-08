@@ -53,11 +53,11 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
 
   const startSend = () => {
     if (!to.trim() || !to.includes("@")) {
-      toast.error("Geçerli bir alıcı adresi yaz.", { duration: 2500 });
+      toast.error("Please enter a valid recipient address.", { duration: 2500 });
       return;
     }
     if (!body.trim()) {
-      toast.error("Mail gövdesi boş olamaz.", { duration: 2500 });
+      toast.error("Mail body can't be empty.", { duration: 2500 });
       return;
     }
     setPhase({ kind: "confirm" });
@@ -76,11 +76,11 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
         toast.error(response.error.user_message, { duration: 3000 });
         return;
       }
-      toast.success("Mail gönderildi.", { duration: 2500 });
+      toast.success("Mail sent.", { duration: 2500 });
       setPhase({ kind: "sent", messageId: response.sent_message_id });
     } catch (err) {
       const message =
-        err instanceof ChatNetworkError ? err.message : "Mail gönderilemedi.";
+        err instanceof ChatNetworkError ? err.message : "Couldn't send the mail.";
       setPhase({ kind: "error", message });
       toast.error(message, { duration: 3000 });
     }
@@ -94,7 +94,7 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
       >
         <div className="flex items-center gap-2">
           <Mail className="h-4 w-4" />
-          Mail <span className="font-semibold">{to}</span> adresine gönderildi.
+          Mail sent to <span className="font-semibold">{to}</span>.
         </div>
       </div>
     );
@@ -106,7 +106,7 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
         data-testid="mail-draft-card"
         className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-500"
       >
-        Taslak iptal edildi.
+        Draft cancelled.
       </div>
     );
   }
@@ -121,26 +121,26 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
     >
       <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-sky-300/80">
         <Mail className="h-3 w-3" />
-        Yeni mail taslağı
+        New mail draft
       </div>
 
       <Field
-        label="Kime"
+        label="To"
         testId="draft-to"
         value={to}
         onChange={setTo}
         disabled={sending}
       />
       <Field
-        label="Konu"
+        label="Subject"
         testId="draft-subject"
         value={subject}
         onChange={setSubject}
         disabled={sending}
-        placeholder="(konusuz)"
+        placeholder="(no subject)"
       />
       <label className="flex flex-col gap-1 text-xs text-slate-400">
-        Gövde
+        Body
         <textarea
           data-testid="draft-body"
           value={body}
@@ -153,7 +153,7 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
 
       {showAuthGate && (
         <div className="space-y-2 rounded-md border border-amber-400/40 bg-amber-500/10 p-2 text-xs text-amber-100">
-          <p>Mail gönderme izni yok. Tekrar bağlanıp send iznini de ver.</p>
+          <p>No mail-send permission. Please reconnect and grant the send scope.</p>
           <a
             href={googleConnectUrl()}
             target="_blank"
@@ -161,7 +161,7 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
             data-testid="draft-reconnect"
             className="inline-flex items-center gap-1 rounded bg-sky-500 px-2 py-1 text-xs font-semibold text-white hover:bg-sky-400"
           >
-            Google'a tekrar bağlan
+            Reconnect to Google
           </a>
         </div>
       )}
@@ -184,7 +184,7 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
           className="flex items-center gap-1 rounded px-3 py-1 text-xs text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
         >
           <X className="h-3 w-3" />
-          İptal
+          Cancel
         </button>
         <button
           type="button"
@@ -202,7 +202,7 @@ export function MailDraftCard({ data }: MailDraftCardProps) {
           ) : (
             <Send className="h-3 w-3" />
           )}
-          Gönder
+          Send
         </button>
       </div>
 
@@ -266,19 +266,20 @@ function ConfirmSendDialog({
     >
       <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-4 shadow-xl">
         <div className="mb-2 text-sm font-semibold text-slate-100">
-          Mail göndereyim mi?
+          Send the mail?
         </div>
         <p className="text-sm text-slate-300">
-          <span className="font-semibold text-slate-100">{to}</span> adresine{" "}
-          {subject ? (
+          You're about to send a {subject ? (
             <>
-              <span className="font-semibold text-slate-100">"{subject}"</span>{" "}
-              başlıklı
+              mail with subject{" "}
+              <span className="font-semibold text-slate-100">"{subject}"</span>
             </>
           ) : (
-            "konusuz"
+            "subject-less mail"
           )}{" "}
-          maili göndermek üzeresin. Gönderdikten sonra geri alınamaz.
+          to{" "}
+          <span className="font-semibold text-slate-100">{to}</span>. Once
+          sent, this can't be undone.
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -287,7 +288,7 @@ function ConfirmSendDialog({
             data-testid="draft-confirm-cancel"
             className="rounded px-3 py-1 text-xs text-slate-300 hover:text-slate-100"
           >
-            Vazgeç
+            Cancel
           </button>
           <button
             type="button"
@@ -296,7 +297,7 @@ function ConfirmSendDialog({
             className="flex items-center gap-1 rounded bg-sky-500 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-400"
           >
             <Send className="h-3 w-3" />
-            Evet, gönder
+            Yes, send
           </button>
         </div>
       </div>
