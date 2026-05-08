@@ -64,8 +64,8 @@ export function EventList({
         } else if (!response.ok) {
           const msg = response.error.user_message;
           if (
-            msg.toLowerCase().includes("bağlı değilsin") ||
-            msg.toLowerCase().includes("takvim izni")
+            msg.toLowerCase().includes("aren't connected") ||
+            msg.toLowerCase().includes("calendar permission")
           ) {
             setStatus({ kind: "needs-auth", message: msg });
           } else {
@@ -78,7 +78,7 @@ export function EventList({
         setStatus({
           kind: "error",
           message:
-            err instanceof ChatNetworkError ? err.message : "Beklenmeyen bir hata.",
+            err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.",
         });
       });
     return () => {
@@ -125,7 +125,7 @@ export function EventList({
         event_id: event.id,
       });
       if (response.ok) {
-        toast.success(`"${event.summary}" silindi.`, { duration: 2500 });
+        toast.success(`"${event.summary}" deleted.`, { duration: 2500 });
         // Inline (chat-rendered) mode: keep the curated list, just drop
         // the deleted row. Standalone mode: refetch so any server-side
         // changes since mount surface too.
@@ -152,7 +152,7 @@ export function EventList({
         className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-8 text-sm text-slate-400"
       >
         <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-        Etkinlikler yükleniyor…
+        Loading events…
       </div>
     );
   }
@@ -171,7 +171,7 @@ export function EventList({
           data-testid="events-reconnect"
           className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
         >
-          Tekrar Google'a bağlan
+          Reconnect to Google
         </a>
       </div>
     );
@@ -191,7 +191,7 @@ export function EventList({
   if (status.events.length === 0) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
-        {initialEvents ? "Liste boşaldı." : "Önümüzdeki 7 günde etkinlik yok."}
+        {initialEvents ? "List is empty." : "No events in the next 7 days."}
       </div>
     );
   }
@@ -241,7 +241,7 @@ export function EventList({
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-300 transition hover:bg-slate-800"
               >
                 <Pencil className="h-3 w-3" />
-                Düzenle
+                Edit
               </button>
               <button
                 type="button"
@@ -250,7 +250,7 @@ export function EventList({
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-300 transition hover:bg-rose-500/10"
               >
                 <Trash2 className="h-3 w-3" />
-                Sil
+                Delete
               </button>
             </div>
           </li>
@@ -296,7 +296,7 @@ export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
 
   const handleSave = async () => {
     if (!summary.trim()) {
-      setError("Başlık boş olamaz.");
+      setError("Title can't be empty.");
       return;
     }
     setSaving(true);
@@ -309,7 +309,7 @@ export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
         description: description.trim(),
       });
       if (response.ok) {
-        toast.success("Etkinlik güncellendi.", { duration: 2500 });
+        toast.success("Event updated.", { duration: 2500 });
         onSaved(
           response.ui_type === "CalendarEvent" ? response.data : undefined,
         );
@@ -329,7 +329,7 @@ export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
     <ModalShell title={`"${event.summary}"`} onClose={onClose} testId="event-edit-modal">
       <div className="space-y-3">
         <label className="flex flex-col gap-1 text-xs text-slate-400">
-          Başlık
+          Title
           <input
             data-testid="edit-title"
             value={summary}
@@ -338,7 +338,7 @@ export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-slate-400">
-          Detay
+          Details
           <textarea
             data-testid="edit-detail"
             value={description}
@@ -358,7 +358,7 @@ export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
             onClick={onClose}
             className="rounded px-3 py-1 text-xs text-slate-300 hover:text-slate-100"
           >
-            İptal
+            Cancel
           </button>
           <button
             type="button"
@@ -371,7 +371,7 @@ export function EditDialog({ event, onClose, onSaved }: EditDialogProps) {
             )}
           >
             {saving && <Loader2 className="h-3 w-3 animate-spin" />}
-            Kaydet
+            Save
           </button>
         </div>
       </div>
@@ -392,13 +392,14 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   return (
     <ModalShell
-      title="Etkinliği sil?"
+      title="Delete event?"
       onClose={onCancel}
       testId="event-confirm-delete"
     >
       <p className="text-sm text-slate-200">
-        <span className="font-semibold text-slate-50">{event.summary}</span>{" "}
-        etkinliğini silmek istediğine emin misin? Bu işlem geri alınamaz.
+        Are you sure you want to delete{" "}
+        <span className="font-semibold text-slate-50">{event.summary}</span>?
+        This can't be undone.
       </p>
       <div className="mt-4 flex justify-end gap-2">
         <button
@@ -407,7 +408,7 @@ export function ConfirmDeleteDialog({
           data-testid="event-confirm-cancel"
           className="rounded px-3 py-1 text-xs text-slate-300 hover:text-slate-100"
         >
-          İptal
+          Cancel
         </button>
         <button
           type="button"
@@ -415,7 +416,7 @@ export function ConfirmDeleteDialog({
           data-testid="event-confirm-yes"
           className="rounded bg-rose-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-400"
         >
-          Evet, sil
+          Yes, delete
         </button>
       </div>
     </ModalShell>

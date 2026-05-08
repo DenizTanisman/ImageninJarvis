@@ -9,10 +9,10 @@ export interface MailMock {
 }
 
 export const MAIL_CATEGORY_LABEL: Record<MailCategoryKey, string> = {
-  important: "Önemli",
+  important: "Important",
   dm: "DM",
   promo: "Promo",
-  other: "Diğer",
+  other: "Other",
 };
 
 export const MAIL_CATEGORY_COLOR: Record<MailCategoryKey, string> = {
@@ -27,15 +27,15 @@ export const MOCK_MAILS: Record<MailCategoryKey, MailMock[]> = {
     {
       id: "m1",
       from: "Test User",
-      subject: "Yarınki toplantı hakkında",
-      snippet: "Saat 14:00 için ajandayı gözden geçirebilir miyiz?",
+      subject: "About tomorrow's meeting",
+      snippet: "Can we go over the agenda for 2 PM?",
       needsReply: true,
     },
     {
       id: "m2",
       from: "Sample Project",
-      subject: "Q2 hedefleri taslağı",
-      snippet: "Ek'te bulunan taslağı inceleyip dönüş yapar mısın?",
+      subject: "Q2 goals draft",
+      snippet: "Could you review the attached draft and get back to me?",
       needsReply: true,
     },
   ],
@@ -43,8 +43,8 @@ export const MOCK_MAILS: Record<MailCategoryKey, MailMock[]> = {
     {
       id: "m3",
       from: "ops@example.com",
-      subject: "Kısa bir soru",
-      snippet: "Hızlıca bir parametreyi doğrulayabilir misin?",
+      subject: "Quick question",
+      snippet: "Could you quickly verify a parameter?",
       needsReply: true,
     },
   ],
@@ -52,22 +52,22 @@ export const MOCK_MAILS: Record<MailCategoryKey, MailMock[]> = {
     {
       id: "m4",
       from: "Newsletter",
-      subject: "Nisan'da neler değişti?",
-      snippet: "Bu ayın yenilikleri…",
+      subject: "What changed in April?",
+      snippet: "This month's updates…",
     },
     {
       id: "m5",
       from: "Store",
-      subject: "%20 indirim fırsatı",
-      snippet: "Sadece bugüne özel kampanya.",
+      subject: "20% discount opportunity",
+      snippet: "Today-only campaign.",
     },
   ],
   other: [
     {
       id: "m6",
       from: "system@example.com",
-      subject: "Haftalık rapor",
-      snippet: "Kullanım özeti raporunuz hazır.",
+      subject: "Weekly report",
+      snippet: "Your usage summary report is ready.",
     },
   ],
 };
@@ -107,24 +107,24 @@ export interface EventMock {
 export const MOCK_EVENTS: EventMock[] = [
   {
     id: "e1",
-    title: "Ürün toplantısı",
+    title: "Product meeting",
     date: "2026-04-28",
     time: "14:00 – 15:00",
-    detail: "Q2 sprint planı ve milestone değerlendirmesi.",
+    detail: "Q2 sprint plan and milestone review.",
   },
   {
     id: "e2",
     title: "Sample Project sync",
     date: "2026-04-29",
     time: "10:00 – 10:30",
-    detail: "Test User ile haftalık güncelleme.",
+    detail: "Weekly update with Test User.",
   },
   {
     id: "e3",
-    title: "Tasarım incelemesi",
+    title: "Design review",
     date: "2026-05-02",
     time: "16:00 – 17:00",
-    detail: "Yeni onboarding akışının tasarım kritiği.",
+    detail: "Design critique of the new onboarding flow.",
   },
 ];
 

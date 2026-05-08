@@ -39,7 +39,7 @@ export function HomeScreen() {
 
       <div className="flex items-center justify-center gap-10">
         <NavButton
-          label="Sesli moda geç"
+          label="Switch to voice mode"
           icon={<Mic className="h-8 w-8" />}
           onClick={() => navigate("/voice")}
           testId="nav-voice"
@@ -48,7 +48,7 @@ export function HomeScreen() {
         <BotAvatar size="xl" />
 
         <NavButton
-          label="Sohbete geç"
+          label="Switch to chat"
           icon={<MessageSquare className="h-8 w-8" />}
           onClick={() => navigate("/chat")}
           testId="nav-chat"
@@ -56,7 +56,7 @@ export function HomeScreen() {
       </div>
 
       <p className="text-sm text-slate-400">
-        Sol: sesli mod · Sağ: sohbet modu
+        Left: voice mode · Right: chat mode
       </p>
     </main>
   );

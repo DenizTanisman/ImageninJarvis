@@ -137,11 +137,11 @@ describe("MailCard real-data flow", () => {
     getAuthStatusMock.mockResolvedValueOnce({ connected: true, scopes: [], can_send: false });
     fetchMailSummaryMock.mockResolvedValueOnce({
       ok: false,
-      error: { user_message: "Mailler çekilemedi", retry_after: 10 },
+      error: { user_message: "Couldn't fetch mail", retry_after: 10 },
     });
     render(<MailCard />);
     expect(await screen.findByTestId("mail-error")).toHaveTextContent(
-      /çekilemedi/,
+      /couldn't fetch/i,
     );
   });
 

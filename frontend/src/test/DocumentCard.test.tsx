@@ -89,7 +89,7 @@ describe("DocumentCard upload flow", () => {
     await user.upload(input, file);
     expect(await screen.findByTestId("document-ready")).toBeInTheDocument();
     expect(screen.getByText("plan.pdf")).toBeInTheDocument();
-    expect(screen.getByText(/3 sayfa/)).toBeInTheDocument();
+    expect(screen.getByText(/3 pages/)).toBeInTheDocument();
   });
 
   it("shows error when upload fails", async () => {
@@ -137,7 +137,7 @@ describe("DocumentCard Drive flow", () => {
     const ChatNetworkError = await importChatNetworkError();
     listDriveFilesMock.mockRejectedValueOnce(
       new ChatNetworkError(
-        "Drive'a bağlı değilsin ya da Drive iznini vermemişsin.",
+        "You aren't connected to Drive or haven't granted Drive permission.",
       ),
     );
     const user = userEvent.setup();
@@ -181,7 +181,7 @@ describe("DocumentCard Q&A", () => {
     uploadDocumentMock.mockResolvedValueOnce(fakeDoc);
     askDocumentMock.mockResolvedValueOnce({
       ok: false,
-      error: { user_message: "Belge cevabı üretilemedi.", retry_after: 15 },
+      error: { user_message: "Couldn't generate an answer from the document.", retry_after: 15 },
     });
     const user = userEvent.setup();
     render(<DocumentCard />);
@@ -191,7 +191,7 @@ describe("DocumentCard Q&A", () => {
     await user.type(screen.getByTestId("qa-input"), "test");
     await user.click(screen.getByTestId("qa-submit"));
     expect(await screen.findByTestId("doc-error")).toHaveTextContent(
-      /üretilemedi/,
+      /couldn't generate/i,
     );
   });
 

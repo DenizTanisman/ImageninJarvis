@@ -67,17 +67,17 @@ export function CalendarForm({ onCreated }: CalendarFormProps) {
         description: draft.detail.trim(),
       });
       if (response.ok && response.ui_type === "CalendarEvent") {
-        toast.success("Etkinlik oluşturuldu.", { duration: 2500 });
+        toast.success("Event created.", { duration: 2500 });
         onCreated?.(response.data);
         setDraft(EMPTY);
       } else if (!response.ok) {
         setError(response.error.user_message);
       } else {
-        setError("Beklenmeyen bir cevap geldi.");
+        setError("Got an unexpected response.");
       }
     } catch (err) {
       setError(
-        err instanceof ChatNetworkError ? err.message : "Beklenmeyen bir hata.",
+        err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.",
       );
     } finally {
       setSubmitting(false);
@@ -87,14 +87,14 @@ export function CalendarForm({ onCreated }: CalendarFormProps) {
   return (
     <form onSubmit={handleSubmit} data-testid="calendar-form" className="space-y-3">
       <Field
-        label="Başlık"
+        label="Title"
         testId="field-title"
         value={draft.title}
         onChange={(v) => update("title", v)}
-        placeholder="Etkinlik adı"
+        placeholder="Event name"
       />
       <Field
-        label="Tarih"
+        label="Date"
         testId="field-date"
         type="date"
         value={draft.date}
@@ -102,14 +102,14 @@ export function CalendarForm({ onCreated }: CalendarFormProps) {
       />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
-          label="Başlangıç"
+          label="Start"
           testId="field-start"
           type="time"
           value={draft.startTime}
           onChange={(v) => update("startTime", v)}
         />
         <Field
-          label="Bitiş"
+          label="End"
           testId="field-end"
           type="time"
           value={draft.endTime}
@@ -123,15 +123,15 @@ export function CalendarForm({ onCreated }: CalendarFormProps) {
             data-testid="form-time-warning"
             className="text-xs text-amber-300"
           >
-            Bitiş zamanı başlangıçtan sonra olmalı.
+            End time must be after start time.
           </p>
         )}
       <Field
-        label="Detay"
+        label="Details"
         testId="field-detail"
         value={draft.detail}
         onChange={(v) => update("detail", v)}
-        placeholder="Opsiyonel not"
+        placeholder="Optional note"
         textarea
       />
       {error && (
@@ -154,10 +154,10 @@ export function CalendarForm({ onCreated }: CalendarFormProps) {
         {submitting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Oluşturuluyor…
+            Creating…
           </>
         ) : (
-          "Oluştur"
+          "Create"
         )}
       </button>
     </form>

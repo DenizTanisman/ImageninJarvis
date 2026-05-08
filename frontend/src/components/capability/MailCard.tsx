@@ -89,7 +89,7 @@ function CategorySection({
           data-testid={`mail-cat-${categoryKey}-toggle`}
           className="w-full rounded-md border border-slate-700/60 bg-slate-900/40 px-2 py-1 text-xs text-slate-300 transition hover:border-sky-400/40 hover:text-sky-200"
         >
-          {showAll ? "Daha az göster" : `(ve ${hidden} daha — tümünü göster)`}
+          {showAll ? "Show less" : `(${hidden} more — show all)`}
         </button>
       )}
     </section>
@@ -113,7 +113,7 @@ function MailRow({ entry }: { entry: MailEntry }) {
         .then((d) => setDetail({ kind: "ready", detail: d }))
         .catch((e: unknown) => {
           const message =
-            e instanceof ChatNetworkError ? e.message : "Mail içeriği alınamadı.";
+            e instanceof ChatNetworkError ? e.message : "Couldn't fetch mail content.";
           setDetail({ kind: "error", message });
         });
     }
@@ -136,7 +136,7 @@ function MailRow({ entry }: { entry: MailEntry }) {
             <span className="truncate font-medium text-slate-100">{entry.from}</span>
             {entry.needs_reply && (
               <span className="shrink-0 rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] uppercase text-rose-200">
-                yanıt bekliyor
+                needs reply
               </span>
             )}
           </span>
@@ -153,12 +153,12 @@ function MailRow({ entry }: { entry: MailEntry }) {
         <div className="border-t border-slate-800 px-3 py-2 text-xs text-slate-300">
           {entry.summary && (
             <p className="mb-2 italic text-slate-400">
-              <span className="text-slate-500">Özet:</span> {entry.summary}
+              <span className="text-slate-500">Summary:</span> {entry.summary}
             </p>
           )}
           {detail.kind === "loading" && (
             <div className="flex items-center gap-2 text-slate-500">
-              <Loader2 className="h-3 w-3 animate-spin" /> Tam içerik yükleniyor…
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading full content…
             </div>
           )}
           {detail.kind === "error" && (
@@ -168,7 +168,7 @@ function MailRow({ entry }: { entry: MailEntry }) {
           )}
           {detail.kind === "ready" && (
             <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words font-sans text-xs text-slate-200">
-              {detail.detail.body || detail.detail.snippet || "(içerik yok)"}
+              {detail.detail.body || detail.detail.snippet || "(no content)"}
             </pre>
           )}
         </div>
@@ -342,7 +342,7 @@ function Body({
         data-testid="mail-needs-auth"
         className="space-y-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100"
       >
-        <p>Mail özetini çekebilmem için Google hesabını bağlamam gerek.</p>
+        <p>I need you to connect your Google account before I can fetch the mail summary.</p>
         <a
           href={googleConnectUrl()}
           target="_blank"
@@ -350,7 +350,7 @@ function Body({
           data-testid="connect-google"
           className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
         >
-          Google'a bağlan
+          Connect Google
         </a>
       </div>
     );
@@ -387,7 +387,7 @@ function Body({
     <>
       {cached && (
         <p className="text-[10px] uppercase tracking-widest text-slate-500">
-          Önbellekten — son 24 saat içinde alındı
+          From cache — fetched within the last 24 hours
         </p>
       )}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -402,7 +402,7 @@ function Body({
           data-testid="mail-reply-prompt"
           className="w-full rounded-lg border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-sm text-sky-200 transition hover:bg-sky-500/20"
         >
-          Yanıt bekleyen {data.needs_reply_count} mail var — görmek ister misin?
+          {data.needs_reply_count} mail awaiting reply — want to see them?
         </button>
       )}
     </>

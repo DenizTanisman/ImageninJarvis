@@ -57,14 +57,14 @@ describe("TranslationCard real-API flow", () => {
   it("renders friendly error when backend returns ok:false", async () => {
     translateMock.mockResolvedValueOnce({
       ok: false,
-      error: { user_message: "Çeviri servisi yanıt vermiyor.", retry_after: 15 },
+      error: { user_message: "Translation service isn't responding.", retry_after: 15 },
     });
     const user = userEvent.setup();
     render(<TranslationCard />);
     await user.type(screen.getByTestId("source-pane"), "hello");
     await user.click(screen.getByTestId("translate-button"));
     expect(await screen.findByTestId("translation-error")).toHaveTextContent(
-      /yanıt vermiyor/,
+      /isn't responding/i,
     );
   });
 

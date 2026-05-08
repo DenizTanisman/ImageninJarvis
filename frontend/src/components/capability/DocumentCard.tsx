@@ -66,7 +66,7 @@ export function DocumentCard() {
           testId="tab-drive"
         >
           <HardDriveUpload className="h-4 w-4" />
-          Drive'dan seç
+          From Drive
         </TabButton>
       </div>
 
@@ -76,7 +76,7 @@ export function DocumentCard() {
           className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-8 text-sm text-slate-400"
         >
           <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-          {phase.source === "upload" ? "Yükleniyor…" : "Drive'dan getiriliyor…"}
+          {phase.source === "upload" ? "Uploading…" : "Fetching from Drive…"}
         </div>
       )}
 
@@ -91,7 +91,7 @@ export function DocumentCard() {
             onClick={reset}
             className="rounded bg-slate-800 px-3 py-1 text-xs text-slate-200"
           >
-            Tekrar dene
+            Try again
           </button>
         </div>
       )}
@@ -104,7 +104,7 @@ export function DocumentCard() {
               .then(finishIngest)
               .catch((err) => {
                 const message =
-                  err instanceof ChatNetworkError ? err.message : "Beklenmeyen hata.";
+                  err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.";
                 setPhase({ kind: "error", message });
               });
           }}
@@ -119,7 +119,7 @@ export function DocumentCard() {
               .then(finishIngest)
               .catch((err) => {
                 const message =
-                  err instanceof ChatNetworkError ? err.message : "Beklenmeyen hata.";
+                  err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.";
                 setPhase({ kind: "error", message });
               });
           }}
@@ -168,9 +168,9 @@ function UploadZone({ onSelected }: UploadZoneProps) {
       )}
     >
       <Upload className="mx-auto mb-2 h-6 w-6 text-sky-300" />
-      Dosyayı buraya sürükle ya da tıkla.
+      Drag a file here or click to choose one.
       <div className="mt-1 text-xs text-slate-500">
-        Desteklenen: .pdf, .txt · Max 10 MB
+        Supported: .pdf, .txt · Max 10 MB
       </div>
       <input
         data-testid="upload-input"
@@ -206,7 +206,7 @@ function DrivePicker({ onPicked }: DrivePickerProps) {
       })
       .catch((err) => {
         if (cancelled) return;
-        if (err instanceof ChatNetworkError && /bağlı/i.test(err.message)) {
+        if (err instanceof ChatNetworkError && /aren't connected|connect/i.test(err.message)) {
           setState({ kind: "needs-auth" });
         } else {
           setState({
@@ -228,7 +228,7 @@ function DrivePicker({ onPicked }: DrivePickerProps) {
         className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-6 text-sm text-slate-400"
       >
         <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-        Drive listesi yükleniyor…
+        Loading Drive list…
       </div>
     );
   }
@@ -239,7 +239,7 @@ function DrivePicker({ onPicked }: DrivePickerProps) {
         data-testid="drive-needs-auth"
         className="space-y-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100"
       >
-        <p>Drive izni yok. Tekrar bağlanıp Drive iznini de ver.</p>
+        <p>Drive permission missing. Please reconnect and grant Drive access.</p>
         <a
           href={googleConnectUrl()}
           target="_blank"
@@ -247,7 +247,7 @@ function DrivePicker({ onPicked }: DrivePickerProps) {
           data-testid="drive-reconnect"
           className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
         >
-          Tekrar Google'a bağlan
+          Reconnect to Google
         </a>
       </div>
     );
@@ -267,7 +267,7 @@ function DrivePicker({ onPicked }: DrivePickerProps) {
   if (state.files.length === 0) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
-        Drive'da PDF veya metin dosyası yok.
+        No PDF or text files in Drive.
       </div>
     );
   }
@@ -343,7 +343,7 @@ function ReadyState({ doc, onReset }: ReadyStateProps) {
           <FileText className="h-4 w-4 shrink-0" />
           <span className="truncate font-medium">{doc.original_name}</span>
           <span className="shrink-0 text-xs text-emerald-200/80">
-            · {doc.page_count} sayfa · {formatSize(doc.size_bytes)}
+            · {doc.page_count} pages · {formatSize(doc.size_bytes)}
           </span>
         </div>
         <button
@@ -353,7 +353,7 @@ function ReadyState({ doc, onReset }: ReadyStateProps) {
           className="flex shrink-0 items-center gap-1 rounded px-2 py-1 text-xs text-slate-300 transition hover:text-slate-100"
         >
           <RotateCcw className="h-3 w-3" />
-          Başka belge
+          Different document
         </button>
       </div>
 
@@ -364,11 +364,11 @@ function ReadyState({ doc, onReset }: ReadyStateProps) {
             className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-sm"
           >
             <div className="text-xs uppercase tracking-wide text-slate-500">
-              Soru
+              Question
             </div>
             <div className="text-slate-200">{item.question}</div>
             <div className="mt-2 text-xs uppercase tracking-wide text-slate-500">
-              Cevap
+              Answer
             </div>
             <div className="whitespace-pre-wrap text-slate-100">{item.answer}</div>
           </li>
@@ -395,7 +395,7 @@ function ReadyState({ doc, onReset }: ReadyStateProps) {
               void ask();
             }
           }}
-          placeholder="Bu belge hakkında soru sor…"
+          placeholder="Ask a question about this document…"
           disabled={pending}
           className="flex-1 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-400 disabled:opacity-50"
         />

@@ -61,14 +61,14 @@ export function TranslationCard() {
     if (!text) return;
     if (navigator.clipboard) {
       void navigator.clipboard.writeText(text);
-      toast.success(`${label} kopyalandı.`, { duration: 1500 });
+      toast.success(`${label} copied.`, { duration: 1500 });
     }
   };
 
   const runTranslate = async () => {
     const trimmed = source.trim();
     if (!trimmed) {
-      setStatus({ kind: "error", message: "Çevirmek istediğin metni yaz." });
+      setStatus({ kind: "error", message: "Please enter the text you want to translate." });
       return;
     }
     setStatus({ kind: "loading" });
@@ -87,7 +87,7 @@ export function TranslationCard() {
       }
     } catch (err) {
       const message =
-        err instanceof ChatNetworkError ? err.message : "Beklenmeyen bir hata.";
+        err instanceof ChatNetworkError ? err.message : "An unexpected error occurred.";
       setStatus({ kind: "error", message });
     }
   };
@@ -97,14 +97,14 @@ export function TranslationCard() {
   return (
     <div data-testid="translation-card" className="space-y-3">
       <Pane
-        label="Kaynak"
+        label="Source"
         lang={sourceLang}
         langOptions={SOURCE_LANGS}
         onLangChange={setSourceLang}
         langTestId="lang-source"
         value={source}
         onChange={setSource}
-        onCopy={() => copy(source, "Kaynak")}
+        onCopy={() => copy(source, "Source")}
         readOnly={false}
         testId="source-pane"
         disabled={isLoading}
@@ -116,7 +116,7 @@ export function TranslationCard() {
           onClick={swap}
           disabled={isLoading}
           data-testid="swap-button"
-          aria-label="Dilleri değiştir"
+          aria-label="Swap languages"
           className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-sky-300 ring-1 ring-slate-700 transition hover:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ArrowDownUp className="h-4 w-4" />
@@ -124,14 +124,14 @@ export function TranslationCard() {
       </div>
 
       <Pane
-        label="Hedef"
+        label="Target"
         lang={targetLang}
         langOptions={TARGET_LANGS}
         onLangChange={setTargetLang}
         langTestId="lang-target"
         value={target}
         onChange={setTarget}
-        onCopy={() => copy(target, "Çeviri")}
+        onCopy={() => copy(target, "Translation")}
         readOnly
         testId="target-pane"
         disabled={isLoading}
@@ -156,12 +156,12 @@ export function TranslationCard() {
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Çeviriliyor…
+            Translating…
           </>
         ) : (
           <>
             <Languages className="h-4 w-4" />
-            Çevir
+            Translate
           </>
         )}
       </button>
@@ -213,7 +213,7 @@ function Pane({
           <button
             type="button"
             onClick={onCopy}
-            aria-label={`${label} metni kopyala`}
+            aria-label={`Copy ${label} text`}
             className="text-slate-400 transition hover:text-sky-300"
           >
             <Copy className="h-4 w-4" />
@@ -228,7 +228,7 @@ function Pane({
         onChange={(e) => onChange(e.target.value)}
         rows={3}
         placeholder={
-          readOnly ? "Çeviri burada görünecek…" : "Çevirmek istediğin metni yaz…"
+          readOnly ? "Translation will appear here…" : "Type the text you want to translate…"
         }
         className={cn(
           "w-full resize-none bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-600",

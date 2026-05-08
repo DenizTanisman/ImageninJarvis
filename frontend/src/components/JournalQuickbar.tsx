@@ -21,31 +21,31 @@ interface JournalTag {
 const JOURNAL_TAGS: JournalTag[] = [
   {
     tag: "/detail",
-    label: "Detay",
+    label: "Detail",
     icon: ScrollText,
     accent: "text-sky-300",
-    hint: "Tüm kategoriler — özet, yapılacaklar, kaygılar, başarılar, öneri",
+    hint: "All categories — summary, todos, concerns, successes, suggestion",
   },
   {
     tag: "/todo",
-    label: "Yapılacaklar",
+    label: "Todos",
     icon: ListChecks,
     accent: "text-amber-300",
-    hint: "Açık / tamamlanan / ertelenmiş + analiz",
+    hint: "Open / completed / postponed + analysis",
   },
   {
     tag: "/concern",
-    label: "Kaygılar",
+    label: "Concerns",
     icon: AlertTriangle,
     accent: "text-rose-300",
-    hint: "Anksiyete / korku / başarısızlık + empatik özet",
+    hint: "Anxiety / fear / failure + empathetic summary",
   },
   {
     tag: "/success",
-    label: "Başarılar",
+    label: "Successes",
     icon: Sparkles,
     accent: "text-emerald-300",
-    hint: "Kazanımlar / kilometre taşları / pozitif anlar",
+    hint: "Wins / milestones / positive moments",
   },
 ];
 
@@ -57,12 +57,12 @@ interface JournalQuickbarProps {
 export function JournalQuickbar({ onSelect, disabled }: JournalQuickbarProps) {
   return (
     <nav
-      aria-label="Günlük rapor kısayolları"
+      aria-label="Journal report shortcuts"
       data-testid="journal-quickbar"
       className="flex items-center gap-2 overflow-x-auto border-t border-slate-800 bg-slate-950/40 px-4 py-2 backdrop-blur"
     >
       <span className="shrink-0 text-[11px] uppercase tracking-wider text-slate-500">
-        Günlük
+        Journal
       </span>
       {JOURNAL_TAGS.map(({ tag, label, icon: Icon, accent, hint }) => (
         <button
