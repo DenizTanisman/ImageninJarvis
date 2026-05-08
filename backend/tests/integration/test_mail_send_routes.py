@@ -229,7 +229,7 @@ def test_send_returns_friendly_error_when_gmail_send_fails(client: TestClient) -
     assert response.status_code == 200
     body = response.json()
     assert body["sent_message_id"] is None
-    assert "gönderilemedi" in body["error"]["user_message"].lower()
+    assert "couldn't send" in body["error"]["user_message"].lower()
 
 
 def test_auth_status_reports_can_send_flag(client: TestClient) -> None:

@@ -49,7 +49,7 @@ class TranslationStrategy(CapabilityStrategy):
         if not text:
             return Error(
                 message="empty text",
-                user_message="Çevrilecek metin boş.",
+                user_message="There's no text to translate.",
                 user_notify=True,
                 log_level="info",
             )
@@ -57,7 +57,7 @@ class TranslationStrategy(CapabilityStrategy):
             return Error(
                 message=f"text exceeds {MAX_INPUT_CHARS} chars ({len(text)})",
                 user_message=(
-                    f"Metin çok uzun (en fazla {MAX_INPUT_CHARS} karakter)."
+                    f"The text is too long (max {MAX_INPUT_CHARS} characters)."
                 ),
                 user_notify=True,
                 log_level="info",
@@ -65,21 +65,21 @@ class TranslationStrategy(CapabilityStrategy):
         if not target:
             return Error(
                 message="missing target lang",
-                user_message="Hedef dil belirtilmedi.",
+                user_message="No target language specified.",
                 user_notify=True,
                 log_level="info",
             )
         if source not in SUPPORTED_LANGS or target not in SUPPORTED_LANGS:
             return Error(
                 message=f"unsupported lang ({source}->{target})",
-                user_message="Bu dil çiftini henüz desteklemiyorum.",
+                user_message="This language pair isn't supported yet.",
                 user_notify=True,
                 log_level="info",
             )
         if target == "auto":
             return Error(
                 message="auto cannot be target",
-                user_message="Hedef dil 'auto' olamaz.",
+                user_message="Target language can't be 'auto'.",
                 user_notify=True,
                 log_level="info",
             )
@@ -96,7 +96,7 @@ class TranslationStrategy(CapabilityStrategy):
             logger.error("Translation Gemini call failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Çeviri servisi şu an yanıt vermiyor, biraz sonra dene.",
+                user_message="The translation service isn't responding right now — please try again in a moment.",
                 retry_after=15,
             )
 

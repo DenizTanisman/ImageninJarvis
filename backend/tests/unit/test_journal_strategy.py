@@ -115,7 +115,7 @@ async def test_execute_no_tag_returns_error():
     strategy = JournalReportStrategy("http://x", "y")
     result = await strategy.execute({"text": "merhaba"})
     assert isinstance(result, Error)
-    assert "anlamadım" in result.user_message
+    assert "didn't recognise" in result.user_message
 
 
 @pytest.mark.asyncio
@@ -123,7 +123,7 @@ async def test_execute_unconfigured_returns_error():
     strategy = JournalReportStrategy("", "")
     result = await strategy.execute({"text": "/detail"})
     assert isinstance(result, Error)
-    assert "yapılandırılmamış" in result.user_message
+    assert "isn't configured" in result.user_message
 
 
 # ---------------------------------------------------------------------------
@@ -133,13 +133,13 @@ async def test_execute_unconfigured_returns_error():
 @pytest.mark.parametrize(
     "status,upstream_code,expected_substring",
     [
-        (401, None, "kimlik"),
-        (404, "no_entries", "günlük girişi"),
-        (404, "date_not_in_range", "aralıkta giriş yok"),
-        (429, None, "hızlı"),
-        (502, None, "erişilemiyor"),
-        (503, None, "erişilemiyor"),
-        (500, None, "beklenmedik"),
+        (401, None, "authentication"),
+        (404, "no_entries", "journal entries"),
+        (404, "date_not_in_range", "no journal entries found in range"),
+        (429, None, "too fast"),
+        (502, None, "unreachable"),
+        (503, None, "unreachable"),
+        (500, None, "unexpected"),
     ],
 )
 async def test_execute_maps_reporter_errors(status, upstream_code, expected_substring):
@@ -173,4 +173,4 @@ async def test_execute_connect_error_returns_retryable_error():
     strategy, _ = _strategy_with_handler(handler)
     result = await strategy.execute({"text": "/detail"})
     assert isinstance(result, Error)
-    assert "ulaşamıyorum" in result.user_message
+    assert "can't reach" in result.user_message

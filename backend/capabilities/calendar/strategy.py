@@ -98,7 +98,7 @@ class CalendarStrategy(CapabilityStrategy):
         if action not in VALID_ACTIONS:
             return Error(
                 message=f"unknown action: {action!r}",
-                user_message="Bu takvim isteğini anlayamadım.",
+                user_message="I couldn't understand this calendar request.",
                 user_notify=True,
                 log_level="info",
             )
@@ -120,7 +120,7 @@ class CalendarStrategy(CapabilityStrategy):
             logger.error("Calendar %s failed: %s", action, exc)
             return Error(
                 message=str(exc),
-                user_message="Takvim isteği başarısız oldu, biraz sonra tekrar dener misin?",
+                user_message="The calendar request failed — please try again in a moment.",
                 retry_after=10,
             )
 
@@ -137,12 +137,12 @@ class CalendarStrategy(CapabilityStrategy):
             logger.error("Calendar credential refresh failed: %s", exc)
             return Error(
                 message=str(exc),
-                user_message="Google bağlantın yenilenemedi, tekrar bağlan.",
+                user_message="Couldn't refresh your Google connection — please reconnect.",
             )
         if creds is None:
             return Error(
                 message="not connected",
-                user_message="Google'a bağlı değilsin. Önce takvim erişimi için bağlan.",
+                user_message="You aren't connected to Google. Please connect first to grant calendar access.",
                 user_notify=True,
                 log_level="info",
             )
@@ -150,8 +150,8 @@ class CalendarStrategy(CapabilityStrategy):
             return Error(
                 message="missing calendar scope",
                 user_message=(
-                    "Takvim izni yok. Google'a tekrar bağlanıp takvim "
-                    "iznini de ver."
+                    "Calendar permission is missing. Please reconnect to "
+                    "Google and grant calendar access too."
                 ),
                 user_notify=True,
                 log_level="info",
@@ -175,14 +175,14 @@ class CalendarStrategy(CapabilityStrategy):
         if missing:
             return Error(
                 message=f"missing fields: {missing}",
-                user_message=f"Şu alanlar eksik: {', '.join(missing)}.",
+                user_message=f"Missing fields: {', '.join(missing)}.",
                 user_notify=True,
                 log_level="info",
             )
         if start >= end:
             return Error(
                 message="start>=end",
-                user_message="Bitiş zamanı başlangıçtan sonra olmalı.",
+                user_message="End time must be after start time.",
                 user_notify=True,
                 log_level="info",
             )
@@ -200,7 +200,7 @@ class CalendarStrategy(CapabilityStrategy):
         if not event_id:
             return Error(
                 message="missing event_id",
-                user_message="Hangi etkinlik düzenleniyor?",
+                user_message="Which event do you want to edit?",
                 user_notify=True,
                 log_level="info",
             )
@@ -216,14 +216,14 @@ class CalendarStrategy(CapabilityStrategy):
         if not kwargs:
             return Error(
                 message="no fields to update",
-                user_message="Güncellenecek alan göndermedin.",
+                user_message="You didn't send any fields to update.",
                 user_notify=True,
                 log_level="info",
             )
         if "start" in kwargs and "end" in kwargs and kwargs["start"] >= kwargs["end"]:
             return Error(
                 message="start>=end",
-                user_message="Bitiş zamanı başlangıçtan sonra olmalı.",
+                user_message="End time must be after start time.",
                 user_notify=True,
                 log_level="info",
             )
@@ -257,7 +257,7 @@ class CalendarStrategy(CapabilityStrategy):
 
         return Error(
             message="missing event_id or query",
-            user_message="Hangi etkinlik siliniyor?",
+            user_message="Which event do you want to delete?",
             user_notify=True,
             log_level="info",
         )
@@ -273,8 +273,8 @@ class CalendarStrategy(CapabilityStrategy):
             return Error(
                 message=f"no calendar match for query={normalized!r}",
                 user_message=(
-                    f"Önümüzdeki günlerde '{normalized}' adında bir etkinlik "
-                    "bulamadım."
+                    f"I couldn't find an event named '{normalized}' in the "
+                    "days ahead."
                 ),
                 user_notify=True,
                 log_level="info",
@@ -302,11 +302,11 @@ class CalendarStrategy(CapabilityStrategy):
 def _missing_fields(*, summary: str, start: str, end: str) -> list[str]:
     missing: list[str] = []
     if not summary:
-        missing.append("başlık")
+        missing.append("title")
     if not start:
-        missing.append("başlangıç")
+        missing.append("start")
     if not end:
-        missing.append("bitiş")
+        missing.append("end")
     return missing
 
 

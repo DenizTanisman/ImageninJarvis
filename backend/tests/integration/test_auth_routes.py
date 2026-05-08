@@ -65,7 +65,7 @@ def test_callback_with_error_param_returns_400_html(client: TestClient) -> None:
         params={"state": "ok-state", "error": "access_denied"},
     )
     assert response.status_code == 400
-    assert "iptal" in response.text.lower()
+    assert "cancelled" in response.text.lower()
     fake.exchange_code.assert_not_called()
     assert "ok-state" not in auth_routes._pending_states
 
@@ -82,7 +82,7 @@ def test_callback_success_exchanges_code_and_renders_page(client: TestClient) ->
         params={"state": "ok-state-2", "code": "the-code"},
     )
     assert response.status_code == 200
-    assert "başarılı" in response.text.lower()
+    assert "successful" in response.text.lower()
     fake.exchange_code.assert_called_once_with(
         code="the-code", code_verifier="verifier-2"
     )

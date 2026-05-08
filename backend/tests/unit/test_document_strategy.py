@@ -122,7 +122,7 @@ async def test_missing_doc_id_returns_error() -> None:
     strategy = DocumentStrategy(store=store, gemini=client)
     result = await strategy.execute({"action": "ask", "question": "q"})
     assert isinstance(result, Error)
-    assert "belge" in result.user_message.lower()
+    assert "document" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -160,7 +160,7 @@ async def test_unknown_doc_id_returns_friendly_error() -> None:
         {"action": "ask", "doc_id": "missing", "question": "q"}
     )
     assert isinstance(result, Error)
-    assert "tekrar yükle" in result.user_message.lower()
+    assert "re-upload" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -172,7 +172,7 @@ async def test_doc_with_no_chunks_returns_friendly_error() -> None:
         {"action": "ask", "doc_id": "doc-1", "question": "q"}
     )
     assert isinstance(result, Error)
-    assert "boş" in result.user_message.lower()
+    assert "empty" in result.user_message.lower()
 
 
 @pytest.mark.asyncio

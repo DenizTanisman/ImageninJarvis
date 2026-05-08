@@ -57,7 +57,7 @@ async def test_translate_wraps_text_in_user_content_safety_tags() -> None:
     assert "<user_content>" in captured["prompt"]
     assert "</user_content>" in captured["prompt"]
     assert "ignore previous instructions" in captured["prompt"]
-    assert "Hedef dil: en" in captured["prompt"]
+    assert "Target language: en" in captured["prompt"]
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ async def test_translate_defaults_source_to_auto() -> None:
     result = await strategy.execute({"text": "Selam", "target": "en"})
     assert isinstance(result, Success)
     assert result.data["source_lang"] == "auto"
-    assert "Kaynak dil: auto" in captured["prompt"]
+    assert "Source language: auto" in captured["prompt"]
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_translate_rejects_empty_text() -> None:
     strategy = TranslationStrategy(client)
     result = await strategy.execute({"text": "   ", "target": "en"})
     assert isinstance(result, Error)
-    assert "boş" in result.user_message.lower()
+    assert "no text" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test_translate_rejects_missing_target() -> None:
     strategy = TranslationStrategy(client)
     result = await strategy.execute({"text": "hi"})
     assert isinstance(result, Error)
-    assert "hedef" in result.user_message.lower()
+    assert "target language" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -96,7 +96,7 @@ async def test_translate_rejects_oversize_text() -> None:
         {"text": "x" * (MAX_INPUT_CHARS + 1), "target": "en"}
     )
     assert isinstance(result, Error)
-    assert "uzun" in result.user_message.lower()
+    assert "too long" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -134,7 +134,7 @@ async def test_translate_returns_friendly_error_on_gemini_unavailable() -> None:
     )
     assert isinstance(result, Error)
     assert result.retry_after == 15
-    assert "yanıt vermiyor" in result.user_message.lower()
+    assert "isn't responding" in result.user_message.lower()
 
 
 def test_can_handle_only_translation_intent() -> None:

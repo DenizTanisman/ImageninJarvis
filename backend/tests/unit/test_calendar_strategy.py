@@ -50,7 +50,7 @@ async def test_unknown_action_returns_error() -> None:
     strategy = _strategy(MagicMock())
     result = await strategy.execute({"action": "rsvp"})
     assert isinstance(result, Error)
-    assert "anlayamadım" in result.user_message.lower()
+    assert "couldn't understand" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -61,7 +61,7 @@ async def test_returns_error_when_not_connected() -> None:
     )
     result = await strategy.execute({"action": "list"})
     assert isinstance(result, Error)
-    assert "bağlı değilsin" in result.user_message.lower()
+    assert "aren't connected" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def test_returns_error_when_calendar_scope_missing() -> None:
     )
     result = await strategy.execute({"action": "list"})
     assert isinstance(result, Error)
-    assert "takvim izni" in result.user_message.lower()
+    assert "calendar permission" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -84,7 +84,7 @@ async def test_returns_error_when_credential_refresh_raises() -> None:
     )
     result = await strategy.execute({"action": "list"})
     assert isinstance(result, Error)
-    assert "yenilenemedi" in result.user_message.lower()
+    assert "couldn't refresh" in result.user_message.lower()
 
 
 # ---------- list ----------
@@ -142,7 +142,7 @@ async def test_create_rejects_missing_fields() -> None:
     strategy = _strategy(MagicMock())
     result = await strategy.execute({"action": "create"})
     assert isinstance(result, Error)
-    assert "başlık" in result.user_message.lower()
+    assert "title" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
@@ -186,7 +186,7 @@ async def test_update_rejects_no_fields() -> None:
     strategy = _strategy(MagicMock())
     result = await strategy.execute({"action": "update", "event_id": "e1"})
     assert isinstance(result, Error)
-    assert "alan" in result.user_message.lower()
+    assert "fields to update" in result.user_message.lower()
 
 
 @pytest.mark.asyncio
